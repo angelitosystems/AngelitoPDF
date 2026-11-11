@@ -1,0 +1,3 @@
+out/
+fixtures/report-*.html
+__pycache__/

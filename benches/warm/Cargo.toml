@@ -1,0 +1,22 @@
+# In-process (warm) benchmark of the public contract. Own workspace so the root
+# Cargo.toml is untouched; patches and release profile mirror the root ones.
+[package]
+name = "angelito-warm-bench"
+version = "0.0.0"
+edition = "2024"
+publish = false
+
+[dependencies]
+angelito-pdf = { path = "../../crates/angelito-pdf" }
+
+[workspace]
+
+[profile.release]
+lto = "thin"
+codegen-units = 1
+strip = true
+
+[patch.crates-io]
+blitz-dom = { path = "../../vendor/blitz-dom" }
+blitz-html = { path = "../../vendor/blitz-html" }
+fulgur-blitz = { path = "../../vendor/fulgur-blitz" }

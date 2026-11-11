@@ -1,0 +1,20 @@
+[package]
+name = "angelito-pdf-cli"
+description = "Command-line interface for Angelito PDF Engine (HTML on stdin, PDF on stdout)"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+
+[[bin]]
+name = "angelito-pdf"
+path = "src/main.rs"
+
+[dependencies]
+angelito-pdf.workspace = true
+serde_json.workspace = true
+
+[dev-dependencies]
+lopdf = "0.45"

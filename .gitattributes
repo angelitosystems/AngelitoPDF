@@ -1,0 +1,17 @@
+# Composer installs this repo from GitHub tag archives: keep only the PHP package in them.
+/.claude export-ignore
+/.github export-ignore
+/benches export-ignore
+/crates export-ignore
+/docs export-ignore
+/examples export-ignore
+/tests export-ignore
+/vendor export-ignore
+/website export-ignore
+/packages/php/tests export-ignore
+/packages/php/phpunit.xml export-ignore
+/.gitattributes export-ignore
+/AGENTS.md export-ignore
+/Cargo.toml export-ignore
+/Cargo.lock export-ignore
+/deny.toml export-ignore

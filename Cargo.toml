@@ -1,0 +1,29 @@
+[workspace]
+resolver = "3"
+members = ["crates/angelito-pdf", "crates/angelito-pdf-cli"]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.89"
+license = "MIT OR Apache-2.0"
+authors = ["Angelito Systems S.A.C."]
+repository = "https://github.com/angelitosystems/AngelitoPDF"
+
+[workspace.dependencies]
+angelito-pdf = { path = "crates/angelito-pdf" }
+fulgur = "=0.41.0"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+thiserror = "2"
+
+[profile.release]
+lto = "thin"
+codegen-units = 1
+strip = true
+
+# Patched upstream crates — see vendor/README.md for the exact diff and why.
+[patch.crates-io]
+blitz-dom = { path = "vendor/blitz-dom" }
+blitz-html = { path = "vendor/blitz-html" }
+fulgur-blitz = { path = "vendor/fulgur-blitz" }

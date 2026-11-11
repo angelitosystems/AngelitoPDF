@@ -1,0 +1,64 @@
+@import "tailwindcss";
+
+/* Tokens: one set of variables, swapped per theme, exposed to Tailwind as colors (bg-bg, text-fg2, border-line…). */
+:root {
+  --bg: #fafafa; --surface: #ffffff; --fg: #171717; --fg2: #4d4d4d; --fg3: #8f8f8f;
+  --line: #ebebeb; --line2: #e0e0e0; --hover: rgb(0 0 0 / .05); --body: rgb(23 23 23 / .9);
+  --s1: #2a78d6; --s2: #eb6834; --s3: #1baf7a;
+  --info-bg: #f0f6ff; --info-line: #cde2fb; --warn-bg: #fff8eb; --warn-line: #fbe3ae;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0a0a0a; --surface: #111111; --fg: #ededed; --fg2: #a1a1a1; --fg3: #737373;
+    --line: #242424; --line2: #2e2e2e; --hover: rgb(255 255 255 / .06); --body: rgb(237 237 237 / .9);
+    --s1: #3987e5; --s2: #d95926; --s3: #199e70;
+    --info-bg: #0b1a2e; --info-line: #1b3a63; --warn-bg: #241a07; --warn-line: #5c4510;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0a0a0a; --surface: #111111; --fg: #ededed; --fg2: #a1a1a1; --fg3: #737373;
+  --line: #242424; --line2: #2e2e2e; --hover: rgb(255 255 255 / .06); --body: rgb(237 237 237 / .9);
+  --s1: #3987e5; --s2: #d95926; --s3: #199e70;
+  --info-bg: #0b1a2e; --info-line: #1b3a63; --warn-bg: #241a07; --warn-line: #5c4510;
+  color-scheme: dark;
+}
+
+@theme inline {
+  --color-bg: var(--bg); --color-surface: var(--surface); --color-fg: var(--fg); --color-fg2: var(--fg2);
+  --color-fg3: var(--fg3); --color-line: var(--line); --color-line2: var(--line2); --color-hover: var(--hover);
+  --color-s1: var(--s1); --color-s2: var(--s2); --color-s3: var(--s3);
+  --font-sans: Geist, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: "Geist Mono", ui-monospace, Consolas, monospace;
+}
+
+@layer base {
+  html { scroll-padding-top: 88px; -webkit-text-size-adjust: 100% }
+  body { @apply bg-bg text-fg font-sans antialiased; font-feature-settings: "calt" 0 }
+  :focus-visible { outline: 2px solid var(--s1); outline-offset: 2px; border-radius: 4px }
+  dialog::backdrop { background: rgb(0 0 0 / .4) }
+}
+
+/* Long-form content is plain JSX in docs.jsx; this typographic scale was measured from the reference. */
+@layer components {
+  .prose { color: var(--body); font-size: 16px; line-height: 28px }
+  .prose > h2 { color: var(--fg); font-size: 24px; line-height: 32px; font-weight: 450; letter-spacing: -.96px; margin: 56px 0 24px }
+  .prose > h2:first-child { margin-top: 0 }
+  .prose > h3 { color: var(--fg); font-size: 18px; line-height: 28px; font-weight: 500; letter-spacing: -.36px; margin: 40px 0 16px }
+  .prose > p { margin: 0 0 20px }
+  .prose ul { margin: 0 0 20px; padding-left: 22px; list-style: disc }
+  .prose li { margin: 8px 0; padding-left: 4px }
+  .prose li::marker { color: var(--fg3) }
+  .prose strong { color: var(--fg); font-weight: 500 }
+  .prose a { color: var(--fg); text-decoration: underline; text-decoration-color: var(--fg3); text-underline-offset: 4px }
+  .prose a:hover { text-decoration-color: var(--fg) }
+  .prose :not(pre) > code { font-family: var(--font-mono); color: var(--fg); background: var(--surface); border: 1px solid var(--line); border-radius: 6px; font-size: .875em; padding: 1px 5px }
+  .prose table { width: 100%; font-size: 14px; line-height: 22px; border-collapse: collapse; font-variant-numeric: tabular-nums }
+  .prose th { text-align: left; font-weight: 500; color: var(--fg); border-bottom: 1px solid var(--line); padding: 10px 12px; white-space: nowrap }
+  .prose td { text-align: left; color: var(--fg2); border-bottom: 1px solid var(--line); padding: 10px 12px; vertical-align: top }
+  .prose table.api { margin: 20px 0 }
+  .prose table.api td:first-child { width: 1%; white-space: nowrap; padding-right: 24px }
+  .prose .scroll { overflow-x: auto; margin: 20px 0 }
+  @media (max-width: 640px) { .prose table.api { display: block; overflow-x: auto } }
+}

@@ -1,0 +1,39 @@
+{
+    "name": "angelitosystems/pdf",
+    "description": "HTML/CSS to PDF for Laravel without Chromium: a native Rust engine (angelito-pdf), downloaded with php artisan pdf:install.",
+    "type": "library",
+    "keywords": ["pdf", "laravel", "html-to-pdf", "invoice", "rust", "dompdf-alternative"],
+    "homepage": "https://angelitosystems.github.io/AngelitoPDF/",
+    "license": ["MIT", "Apache-2.0"],
+    "support": {
+        "issues": "https://github.com/angelitosystems/AngelitoPDF/issues",
+        "source": "https://github.com/angelitosystems/AngelitoPDF"
+    },
+    "require": {
+        "php": "^8.2",
+        "illuminate/console": "^11.0|^12.0",
+        "illuminate/filesystem": "^11.0|^12.0",
+        "illuminate/http": "^11.0|^12.0",
+        "illuminate/support": "^11.0|^12.0",
+        "illuminate/view": "^11.0|^12.0"
+    },
+    "require-dev": {
+        "orchestra/testbench": "^9.0|^10.0",
+        "phpunit/phpunit": "^11.0",
+        "smalot/pdfparser": "^2.11"
+    },
+    "autoload": { "psr-4": { "AngelitoPdf\\": "packages/php/src/" } },
+    "autoload-dev": { "psr-4": { "AngelitoPdf\\Tests\\": "packages/php/tests/" } },
+    "extra": {
+        "laravel": {
+            "providers": ["AngelitoPdf\\PdfServiceProvider"],
+            "aliases": { "Pdf": "AngelitoPdf\\Facades\\Pdf" }
+        }
+    },
+    "config": {
+        "vendor-dir": "packages/php/vendor",
+        "sort-packages": true
+    },
+    "scripts": { "test": "phpunit -c packages/php/phpunit.xml" },
+    "minimum-stability": "stable"
+}

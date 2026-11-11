@@ -1,0 +1,99 @@
+# Push a tag vX.Y.Z (equal to the Cargo workspace version) →
+#   1. build + smoke-test the CLI on 5 platforms
+#   2. run the Laravel package tests against the fresh Linux binary
+#   3. GitHub Release with the binaries + SHA256SUMS (what `php artisan pdf:install` downloads)
+#   4. tell Packagist to re-read the repo (optional: needs PACKAGIST_USERNAME / PACKAGIST_TOKEN secrets)
+name: release
+on:
+  push:
+    tags: ['v*']
+permissions:
+  contents: read
+
+jobs:
+  build:
+    strategy:
+      fail-fast: true
+      matrix:
+        include:
+          - { target: x86_64-unknown-linux-gnu, os: ubuntu-22.04 }        # older glibc (2.35) → runs on more distros
+          - { target: aarch64-unknown-linux-gnu, os: ubuntu-22.04-arm }
+          - { target: x86_64-pc-windows-msvc, os: windows-latest, ext: .exe }
+          - { target: x86_64-apple-darwin, os: macos-15-intel }
+          - { target: aarch64-apple-darwin, os: macos-latest }
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with: { targets: '${{ matrix.target }}' }
+      - uses: Swatinem/rust-cache@v2
+        with: { key: '${{ matrix.target }}' }
+      - name: Tag must equal the crate version
+        shell: bash
+        run: |
+          v="v$(cargo metadata --no-deps --format-version 1 | jq -r '.packages[] | select(.name=="angelito-pdf-cli") | .version')"
+          [ "$v" = "$GITHUB_REF_NAME" ] || { echo "tag $GITHUB_REF_NAME != Cargo version $v"; exit 1; }
+      - run: cargo build --release --locked -p angelito-pdf-cli --target ${{ matrix.target }}
+      - name: Smoke test (renders a real PDF)
+        shell: bash
+        run: |
+          bin="target/${{ matrix.target }}/release/angelito-pdf${{ matrix.ext }}"
+          "$bin" --version
+          echo '<h1>Factura áéíóú ñ</h1><p>ok</p>' | "$bin" --options '{"format":"A5"}' > smoke.pdf
+          [ "$(head -c 5 smoke.pdf)" = "%PDF-" ]
+          "$bin" --options '{"bad":1}' < /dev/null && exit 1 || [ $? -eq 2 ]
+          cp "$bin" "angelito-pdf-${{ matrix.target }}${{ matrix.ext }}"
+      - name: Smoke test on a minimal Debian image (catches missing shared libraries)
+        if: matrix.target == 'x86_64-unknown-linux-gnu'
+        run: |
+          docker run --rm -v "$PWD:/w" -w /w debian:bookworm-slim sh -c \
+            'echo "<p>ok</p>" | ./angelito-pdf-x86_64-unknown-linux-gnu > slim.pdf && head -c 5 slim.pdf | grep -q "%PDF-"'
+      - uses: actions/upload-artifact@v4
+        with:
+          name: bin-${{ matrix.target }}
+          path: angelito-pdf-${{ matrix.target }}${{ matrix.ext }}
+          if-no-files-found: error
+
+  laravel:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with: { name: bin-x86_64-unknown-linux-gnu, path: bin }
+      - run: chmod +x bin/angelito-pdf-x86_64-unknown-linux-gnu
+      - uses: shivammathur/setup-php@v2
+        with: { php-version: '8.3', tools: composer }
+      - run: composer install --no-interaction --no-progress
+      - run: composer test
+        env: { ANGELITO_PDF_BINARY: '${{ github.workspace }}/bin/angelito-pdf-x86_64-unknown-linux-gnu' }
+
+  release:
+    needs: [build, laravel]
+    runs-on: ubuntu-latest
+    permissions: { contents: write }
+    steps:
+      - uses: actions/download-artifact@v4
+        with: { pattern: bin-*, path: dist, merge-multiple: true }
+      - name: Checksums
+        working-directory: dist
+        run: sha256sum angelito-pdf-* > SHA256SUMS && cat SHA256SUMS
+      - name: Create GitHub Release
+        env: { GH_TOKEN: '${{ github.token }}' }
+        run: gh release create "$GITHUB_REF_NAME" dist/* --repo "$GITHUB_REPOSITORY" --verify-tag --generate-notes --title "$GITHUB_REF_NAME"
+
+  packagist:
+    needs: release
+    runs-on: ubuntu-latest
+    env:
+      PACKAGIST_USERNAME: ${{ secrets.PACKAGIST_USERNAME }}
+      PACKAGIST_TOKEN: ${{ secrets.PACKAGIST_TOKEN }}
+    steps:
+      - name: Notify Packagist
+        if: env.PACKAGIST_TOKEN != ''
+        run: |
+          curl -fsS -X POST -H 'Content-Type: application/json' \
+            "https://packagist.org/api/update-package?username=${PACKAGIST_USERNAME}&apiToken=${PACKAGIST_TOKEN}" \
+            -d "{\"repository\":{\"url\":\"https://github.com/${GITHUB_REPOSITORY}\"}}"
+      - if: env.PACKAGIST_TOKEN == ''
+        run: echo "::notice::PACKAGIST_TOKEN not set; relying on Packagist's GitHub hook to pick up the tag."
