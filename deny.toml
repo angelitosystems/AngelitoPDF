@@ -4,6 +4,14 @@ allow = ["MIT", "Apache-2.0", "Apache-2.0 WITH LLVM-exception", "BSD-2-Clause", 
 
 [advisories]
 version = 2
+# Accepted "unmaintained" notices (not vulnerabilities). All arrive only through the renderer
+# (Fulgur -> krilla / usvg / woff2) and cannot be replaced without replacing it. Reviewed 2026-11-11,
+# listed in docs/security.md. Any other advisory - and every vulnerability - still fails CI.
+ignore = [
+    { id = "RUSTSEC-2024-0436", reason = "paste: unmaintained, compile-time macro only; via woff2-patched (Fulgur)" },
+    { id = "RUSTSEC-2026-0206", reason = "rustybuzz: unmaintained; text shaping inside krilla/usvg (Fulgur)" },
+    { id = "RUSTSEC-2026-0192", reason = "ttf-parser: unmaintained; font parsing inside fontdb/krilla (Fulgur)" },
+]
 
 [bans]
 multiple-versions = "allow"

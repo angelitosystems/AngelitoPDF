@@ -29,3 +29,17 @@ clinical notes). Options (`RenderOptions`) and **templates** are trusted develop
 3. **No wall-clock timeout inside the library.** The CLI caller (PHP) must apply one.
 4. Do not use the `|safe` filter on user data in templates; it disables escaping.
 5. Templates are trusted: they must not come from end users.
+
+## Accepted dependency advisories
+
+`cargo deny check` runs in CI. These *unmaintained* notices (no known vulnerability) are accepted in
+`deny.toml` because they reach us only through the renderer and cannot be swapped independently:
+
+| ID | Crate | Path |
+|---|---|---|
+| RUSTSEC-2024-0436 | paste (proc-macro, build time only) | fulgur-core → woff2-patched → safer-bytes |
+| RUSTSEC-2026-0206 | rustybuzz (text shaping) | krilla, usvg |
+| RUSTSEC-2026-0192 | ttf-parser (font parsing) | fontdb, krilla |
+
+Font parsing is the relevant attack surface: fonts are only loaded from paths the integrator passes
+in `fonts` (or system fonts), never from the HTML. Revisit on each Fulgur upgrade.
