@@ -30,6 +30,27 @@ class PdfBuilder
         };
     }
 
+    /** Footer "Página N de M" via a CSS @page margin box; {page} and {pages} are replaced by the counters. */
+    public function pageNumbers(bool $enabled = true, string $text = 'Página {page} de {pages}', string $position = 'bottom-center'): static
+    {
+        if (! $enabled) {
+            return $this;
+        }
+        if (! preg_match('/^(top|bottom)-(left|center|right)$/', $position)) {
+            throw new PdfException("pageNumbers position must be top|bottom-left|center|right, got '{$position}'", 2);
+        }
+        $parts = preg_split('/(\{page\}|\{pages\})/', $text, -1, PREG_SPLIT_DELIM_CAPTURE | PREG_SPLIT_NO_EMPTY);
+        $content = implode(' ', array_map(fn ($p) => match ($p) {
+            '{page}' => 'counter(page)',
+            '{pages}' => 'counter(pages)',
+            // CSS string: escape backslash and quote, drop newlines (they would end the declaration).
+            default => '"'.str_replace(['\\', '"', "\n", "\r"], ['\\\\', '\\"', ' ', ''], $p).'"',
+        }, $parts));
+        $this->options['css'] = [...($this->options['css'] ?? []), "@page { @{$position} { content: {$content}; font-size: 9px } }"];
+
+        return $this;
+    }
+
     /** Millimetres: margin(10) or margin(top, right, bottom, left). */
     public function margin(float $top, ?float $right = null, ?float $bottom = null, ?float $left = null): static
     {

@@ -65,6 +65,22 @@ class PdfTest extends TestCase
         Pdf::html('<p>x</p>')->orientation('sideways');
     }
 
+    public function test_page_numbers_on_every_page(): void
+    {
+        $html = '<p>uno</p><p style="break-before:page">dos</p><p style="break-before:page">tres</p>';
+        $pages = (new Parser)->parseContent(Pdf::html($html)->pageNumbers()->output())->getPages();
+        $this->assertCount(3, $pages);
+        foreach ($pages as $i => $page) {
+            $this->assertStringContainsString('Página '.($i + 1).' de 3', $page->getText());
+        }
+
+        $custom = (new Parser)->parseContent(Pdf::html($html)->pageNumbers(text: '"{page}"/{pages}', position: 'top-right')->output());
+        $this->assertStringContainsString('"2"/3', $custom->getPages()[1]->getText());
+
+        $this->expectExceptionCode(2);
+        Pdf::html($html)->pageNumbers(position: 'middle');
+    }
+
     public function test_view_download_returns_pdf_response(): void
     {
         $res = Pdf::view('invoice', ['customer' => 'Angelito & Cía', 'total' => '123.45'])
