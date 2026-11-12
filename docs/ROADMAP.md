@@ -22,7 +22,8 @@ aceptación se ejecuta en CI y pasa; la matriz `docs/css-support.md` se actualiz
 |---|---|---|
 | Parser HTML5, HTML imperfecto, entidades, UTF-8 | funciona (html5ever) | `simple_html_produces_valid_pdf_with_text`; HTML imperfecto sin prueba propia |
 | Cascada, especificidad, herencia, `var()`, `calc()` | heredado de Stylo; **sin pruebas propias** | — |
-| Flexbox, Grid | funciona a la vista, **sin prueba de geometría** | fixture factura |
+| Flexbox, Grid, box model, position, text-align | probado (24 pruebas de geometría) | `tests/layout.rs` |
+| `border-color` por lado | **bug: un solo color** | `per_side_border_colors` (ignorada) |
 | `@page`, margin boxes, contadores, `thead` repetido, `@media print`, `break-before` | probado | `invoice_paginates_…` |
 | `@bottom-center` | **bug: sale alineado a la izquierda** | benchmarks fase 4 |
 | Imágenes registradas con tamaño | probado | `images_are_embedded_only_when_registered` |
@@ -50,6 +51,7 @@ Prioridad: P0 arreglar lo que ya existe y falla → P1 probar lo que se supone q
 | 1.5 | Fuentes propias (`fonts`, `@font-face` con `baseDir`) | pagination-typography | prueba: la fuente aparece incrustada (subset) y el texto se extrae |
 | 1.6 | Geometría de Flexbox, Grid y box model | html-css | pruebas que leen posiciones del PDF: `justify-content`, `align-items`, `gap`, columnas de Grid, `margin`/`padding` |
 | 1.7 | `break-inside: avoid`, `break-after`, `page-break-*` | pagination-typography | prueba de texto por página |
+| 1.8 | `border-color` distinto por lado (hoy pinta los 4 lados con el color de arriba) | rust-engine | `per_side_border_colors` (layout.rs) deja de estar ignorada y pasa |
 
 ### Fase 2 — Probar lo heredado del renderizador (P1)
 

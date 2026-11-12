@@ -5,3 +5,4 @@ node_modules/
 website/dist/
 packages/php/vendor/
 /composer.lock
+.claude/worktrees/
