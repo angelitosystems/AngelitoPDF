@@ -4,6 +4,14 @@ Format: [Keep a Changelog](https://keepachangelog.com/). Versioning: SemVer.
 
 ## [Unreleased]
 
+## [0.1.1] - 2026-11-11
+
+### Fixed
+- Laravel 13 support: `composer require angelitosystems/pdf` failed on a fresh Laravel 13 app
+  (constraints allowed only 11–12). Tests now run on Laravel 13.42 / Testbench 11 / PHPUnit 12.
+
+## [0.1.0] - 2026-11-11
+
 ### Added
 - `angelito-pdf` crate: `RenderOptions` (JSON contract), `Engine`, `render`, `render_file`.
 - `angelito-pdf` CLI: HTML via stdin/file → PDF via stdout/file, JSON options, exit codes 0/1/2.

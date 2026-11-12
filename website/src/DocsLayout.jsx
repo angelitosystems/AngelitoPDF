@@ -62,7 +62,7 @@ export function Sidebar({ slug }) {
     <nav aria-label="Documentación" className="text-sm">
       <div className="mb-6 space-y-2">
         <Card icon={I.box} title="Paquete Laravel" sub="angelitosystems/pdf" />
-        <Card icon={I.tag} title="Versión" sub="v0.1.0-dev" />
+        <Card icon={I.tag} title="Versión" sub="v0.1.1" />
       </div>
       {groups.map((g) => {
         const items = PAGES.filter((p) => p.group === g)

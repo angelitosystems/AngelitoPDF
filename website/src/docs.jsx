@@ -55,7 +55,7 @@ export const PAGES = [
         </ul>
         <h2>Cuándo usarlo</h2>
         <p>Sirve para facturas, boletas, tickets térmicos de 58/80 mm, reportes de muchas páginas y constancias: documentos maquetados con CSS moderno (Flexbox, Grid, <code>@page</code>) que hoy obligan a elegir entre DOMPDF, que no maqueta flex ni grid, y Chrome headless, que tarda unos 650 ms y usa unos 750 MiB por documento.</p>
-        <Note kind="warn" title="Estado: 0.1.0-dev">
+        <Note kind="warn" title="Estado: v0.1.1">
           Probado a mano en Windows x64. Los binarios de Linux y macOS los compila y prueba GitHub Actions en cada versión publicada. Aún no está en crates.io. No es un navegador completo: no ejecuta JavaScript. Mira lo que sí funciona en <A to="css">Soporte CSS</A>.
         </Note>
         <h2>Cómo funciona</h2>
@@ -75,7 +75,7 @@ Rust ─────────────────────────
       <>
         <p className="lead">Hay dos piezas: el <strong>paquete de Composer</strong>, que es código PHP, y el <strong>binario</strong> <code>angelito-pdf</code>, que es el motor nativo y se descarga aparte con un comando.</p>
         <h2>1. Instalar el paquete</h2>
-        <p>Requisitos: PHP 8.2 o superior, Laravel 11 o 12 y <code>proc_open</code> habilitado.</p>
+        <p>Requisitos: PHP 8.2 o superior, Laravel 11, 12 o 13 y <code>proc_open</code> habilitado.</p>
         <Code lang="bash">{`composer require angelitosystems/pdf`}</Code>
         <p>El ServiceProvider y la Facade <code>Pdf</code> se registran solos gracias al <i>auto-discovery</i>.</p>
         <h2>2. Descargar el binario</h2>

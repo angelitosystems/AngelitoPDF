@@ -98,7 +98,7 @@ function Landing() {
   return (
     <main id="contenido" tabIndex={-1} className="mx-auto max-w-[1448px] px-4 outline-none sm:px-6">
       <section className="mx-auto max-w-[820px] pb-12 pt-16 text-center sm:pt-24">
-        <p className="mb-4 text-[13px] text-fg3">Angelito Systems S.A.C. · v0.1.0-dev</p>
+        <p className="mb-4 text-[13px] text-fg3">Angelito Systems S.A.C. · v0.1.1</p>
         <h1 className="text-[clamp(2.4rem,7vw,4.5rem)] font-semibold leading-[1.05] tracking-[-.045em]">HTML a PDF.<br />Nativo. Rápido. Sin Chromium.</h1>
         <p className="mx-auto mb-8 mt-5 max-w-[620px] text-[clamp(1rem,2.2vw,1.2rem)] leading-relaxed text-fg2">
           Un motor en Rust que convierte tus vistas Blade en PDF con CSS moderno, en milisegundos y con una fracción de la memoria.

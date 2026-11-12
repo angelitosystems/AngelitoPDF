@@ -1,6 +1,6 @@
 # angelitosystems/pdf
 
-HTML/CSS → PDF for Laravel 11/12 without Chromium. Drives the native `angelito-pdf` CLI
+HTML/CSS → PDF for Laravel 11–13 without Chromium. Drives the native `angelito-pdf` CLI
 (HTML on stdin, PDF on stdout, no shell, no temp files).
 
 ## Install

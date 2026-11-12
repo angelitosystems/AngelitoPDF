@@ -3,9 +3,10 @@
 HTML + CSS → PDF in native Rust. No Chromium, Puppeteer, Playwright, Docker or network.
 By **Angelito Systems S.A.C.**
 
-> **Status: 0.1.0-dev.** The Rust library, the `angelito-pdf` CLI and the Laravel package work and are
-> tested (Windows x64). The Node/NestJS package is not built yet. Nothing is published.
-> Docs: https://angelitosystems.github.io/AngelitoPDF/ (source: [website/](website/)). Phase plan: [AGENTS.md](AGENTS.md).
+> **Status: v0.1.1.** Rust library, `angelito-pdf` CLI and Laravel package (11–13), CI-tested on Linux
+> x64/ARM64, Windows x64 and macOS Intel/ARM64. Binaries: [Releases](https://github.com/angelitosystems/AngelitoPDF/releases) ·
+> Composer: [angelitosystems/pdf](https://packagist.org/packages/angelitosystems/pdf) · Docs: https://angelitosystems.github.io/AngelitoPDF/
+> The Node/NestJS package is not built yet.
 
 ## What works today
 
