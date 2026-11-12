@@ -210,6 +210,49 @@ fn font_face_in_linked_stylesheet_resolves_against_base_dir() {
     assert!(!embedded_fonts(&none).iter().any(|(n, _)| n.contains("NotoSans")));
 }
 
+fn paged_dir() -> RenderOptions {
+    RenderOptions { base_dir: Some(fixtures().join("paged")), system_fonts: false, ..Default::default() }
+}
+
+#[test]
+fn inline_font_face_with_url_under_base_dir_and_family_alias() {
+    // `Mi` is not the font's internal family ('Noto Sans'): only the descriptor can match it.
+    let html = "<style>@font-face{font-family:Mi;src:url(NotoSans-Regular.woff2)}</style><p style=\"font-family:Mi\">hola ñandú</p>";
+    let doc = parse(&render(html, &paged_dir()).unwrap());
+    assert_noto_embedded(&doc);
+    assert!(page_texts(&doc).concat().contains("hola ñandú"));
+}
+
+#[test]
+fn inline_font_face_from_data_url() {
+    let bytes = std::fs::read(fixtures().join("paged/NotoSans-Regular.woff2")).unwrap();
+    let url: String = bytes.iter().map(|b| format!("%{b:02X}")).collect();
+    let html = format!(
+        "<style>@font-face{{font-family:Marca;src:url('data:font/woff2,{url}') format('woff2')}}</style><p style=\"font-family:Marca\">desde data</p>"
+    );
+    // No baseDir needed: `data:` is decoded in memory.
+    let doc = parse(&render(&html, &RenderOptions { system_fonts: false, ..Default::default() }).unwrap());
+    assert_noto_embedded(&doc);
+    assert!(page_texts(&doc).concat().contains("desde data"));
+}
+
+#[test]
+fn inline_font_face_file_url_stays_inside_base_dir() {
+    let abs = fixtures().join("paged/NotoSans-Regular.woff2").canonicalize().unwrap();
+    let abs = abs.to_string_lossy().trim_start_matches(r"\\?\").replace('\\', "/");
+    for src in ["NotoSans-Regular.woff2".to_string(), format!("file:///{}", abs.trim_start_matches('/'))] {
+        let html = format!("<style>@font-face{{font-family:Mi;src:url('{src}')}}</style><p style=\"font-family:Mi\">x</p>");
+        let doc = parse(&render(&html, &RenderOptions { system_fonts: false, ..Default::default() }).unwrap());
+        assert!(!embedded_fonts(&doc).iter().any(|(n, _)| n.contains("NotoSans")), "{src} was read without baseDir");
+        // Control: the same URL is read once baseDir contains the file.
+        assert_noto_embedded(&parse(&render(&html, &paged_dir()).unwrap()));
+    }
+    // A file outside baseDir is not read even with baseDir set.
+    let o = RenderOptions { base_dir: Some(fixtures().join("paged/no-fonts")), system_fonts: false, ..Default::default() };
+    let html = "<style>@font-face{font-family:Mi;src:url(../NotoSans-Regular.woff2)}</style><p style=\"font-family:Mi\">x</p>";
+    assert!(!embedded_fonts(&parse(&render(html, &o).unwrap())).iter().any(|(n, _)| n.contains("NotoSans")));
+}
+
 // ---- fragmentation -----------------------------------------------------------------------
 
 /// Page index (0-based) of every page whose text contains `needle`.

@@ -1,2 +1,2 @@
-/* @font-face only works from a linked stylesheet, and font-family must be the font's own family name (docs/pagination.md). */
+/* Linked-stylesheet @font-face fixture (test font_face_in_linked_stylesheet_resolves_against_base_dir). Linked sheets register the font under its internal family only (docs/pagination.md). */
 @font-face { font-family: 'Noto Sans'; src: url(NotoSans-Regular.woff2) }
