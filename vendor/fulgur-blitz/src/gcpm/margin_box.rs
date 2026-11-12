@@ -60,6 +60,17 @@ impl MarginBoxPosition {
         }
     }
 
+    /// UA default `text-align` (CSS Paged Media 3 §4.2, margin box variables table).
+    pub fn default_text_align(&self) -> &'static str {
+        match self {
+            Self::TopLeft | Self::BottomLeft => "left",
+            Self::TopRight | Self::BottomRight => "right",
+            Self::TopLeftCorner | Self::BottomLeftCorner => "right",
+            Self::TopRightCorner | Self::BottomRightCorner => "left",
+            _ => "center",
+        }
+    }
+
     /// Parse a CSS at-keyword name (without the `@`) into a `MarginBoxPosition`.
     ///
     /// Accepts names like `"top-center"`, `"bottom-left-corner"`, etc.

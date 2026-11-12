@@ -478,7 +478,8 @@ impl<'i, 'a> AtRuleParser<'i> for PageRuleParser<'a> {
         input: &mut Parser<'i, 't>,
     ) -> Result<Self::AtRule, ParseError<'i, ()>> {
         let mut content_items = Vec::new();
-        let mut declarations = String::new();
+        // Angelito patch: UA default text-align first, so author declarations (appended after) win.
+        let mut declarations = format!("text-align: {}", position.default_text_align());
 
         let mut parser = MarginBoxParser {
             content: &mut content_items,
@@ -2109,6 +2110,14 @@ mod tests {
         );
         assert!(mb.declarations.contains("font-size"));
         assert!(mb.declarations.contains("color"));
+    }
+
+    #[test]
+    fn margin_box_ua_text_align_precedes_author_declarations() {
+        let css = "@page { @bottom-center { content: 'a' } @top-right { content: 'b'; text-align: left } }";
+        let ctx = parse_gcpm(css);
+        assert_eq!(ctx.margin_boxes[0].declarations, "text-align: center");
+        assert_eq!(ctx.margin_boxes[1].declarations, "text-align: right; text-align: left");
     }
 
     #[test]
