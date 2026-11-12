@@ -127,6 +127,8 @@ pub struct BaseDocument {
     // Parley contexts
     /// A Parley font context
     pub(crate) font_ctx: Arc<Mutex<parley::FontContext>>,
+    /// angelito: fonts from inline `@font-face` rules, see `font_face.rs`
+    pub(crate) pending_fonts: crate::font_face::PendingFonts,
     /// A Parley layout context
     pub(crate) layout_ctx: parley::LayoutContext<TextBrush>,
 
@@ -268,6 +270,7 @@ impl BaseDocument {
             ua_stylesheets: HashMap::new(),
             nodes_to_stylesheet: BTreeMap::new(),
             font_ctx,
+            pending_fonts: Default::default(),
             layout_ctx: parley::LayoutContext::new(),
 
             hover_node_id: None,
@@ -594,7 +597,61 @@ impl BaseDocument {
         let css = self.nodes[target_id].text_content();
         let css = html_escape::decode_html_entities(&css);
         let sheet = self.make_stylesheet(&css, Origin::Author);
+        // angelito: upstream never loaded `@font-face` from inline `<style>`.
+        crate::font_face::fetch_font_faces(
+            self.id,
+            &sheet.0,
+            &self.net_provider,
+            &self.guard.read(),
+            &self.pending_fonts,
+        );
         self.add_stylesheet_for_node(sheet, target_id);
+        self.register_pending_fonts();
+    }
+
+    /// angelito: register fonts fetched by `font_face.rs` under their `font-family`.
+    fn register_pending_fonts(&mut self) {
+        let fonts = std::mem::take(&mut *self.pending_fonts.lock().unwrap());
+        if fonts.is_empty() {
+            return;
+        }
+        for (bytes, family) in fonts {
+            self.register_font(bytes, family.as_deref());
+        }
+        self.invalidate_inline_contexts();
+    }
+
+    fn register_font(&mut self, bytes: blitz_traits::net::Bytes, family: Option<&str>) {
+        let font = Blob::new(Arc::new(bytes));
+        let info = family.map(|family_name| parley::fontique::FontInfoOverride {
+            family_name: Some(family_name),
+            ..Default::default()
+        });
+
+        // TODO: Investigate eliminating double-box
+        let mut font_ctx = self.font_ctx.lock().unwrap();
+        font_ctx.collection.register_fonts(font.clone(), info);
+
+        #[cfg(feature = "parallel-construct")]
+        {
+            let doc_font_ctx = &*font_ctx;
+            rayon::broadcast(|_ctx| {
+                FONT_CTX.with_borrow_mut(|font_ctx| {
+                    match font_ctx {
+                        None => {
+                            println!(
+                                "Initialising FontContext for thread {:?}",
+                                std::thread::current().id()
+                            );
+                            *font_ctx = Some(Box::new(doc_font_ctx.clone()));
+                        }
+                        Some(font_ctx) => {
+                            font_ctx.collection.register_fonts(font.clone(), info);
+                        }
+                    };
+                })
+            });
+        }
     }
 
     pub fn remove_user_agent_stylesheet(&mut self, contents: &str) {
@@ -717,40 +774,13 @@ impl BaseDocument {
                 }
             }
             Resource::Font(bytes) => {
-                let font = Blob::new(Arc::new(bytes));
-
-                // TODO: Implement FontInfoOveride
-                // TODO: Investigate eliminating double-box
-                let mut font_ctx = self.font_ctx.lock().unwrap();
-                font_ctx.collection.register_fonts(font.clone(), None);
-
-                #[cfg(feature = "parallel-construct")]
-                {
-                    let doc_font_ctx = &*font_ctx;
-                    rayon::broadcast(|_ctx| {
-                        FONT_CTX.with_borrow_mut(|font_ctx| {
-                            match font_ctx {
-                                None => {
-                                    println!(
-                                        "Initialising FontContext for thread {:?}",
-                                        std::thread::current().id()
-                                    );
-                                    *font_ctx = Some(Box::new(doc_font_ctx.clone()));
-                                }
-                                Some(font_ctx) => {
-                                    font_ctx.collection.register_fonts(font.clone(), None);
-                                }
-                            };
-                        })
-                    });
-                }
-                drop(font_ctx);
+                self.register_font(bytes, None);
 
                 // TODO: see if we can only invalidate if resolved fonts may have changed
                 self.invalidate_inline_contexts();
             }
             Resource::None => {
-                // Do nothing
+                self.register_pending_fonts();
             }
             _ => {}
         }
