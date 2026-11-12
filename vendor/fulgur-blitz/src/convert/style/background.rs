@@ -38,52 +38,15 @@ pub(super) fn apply_to(style: &mut BlockStyle, ctx: &StyleContext<'_>) {
             use style::values::computed::image::Image;
 
             // Resolve `content` + intrinsic size per image kind. URL images
-            // require an `AssetBundle`; gradients are self-contained.
+            // come from the `AssetBundle` or a `data:` URL; gradients are self-contained.
             let resolved: Option<(BgImageContent, f32, f32)> = match image {
-                Image::Url(url) => ctx.assets.and_then(|a| {
+                Image::Url(url) => {
                     let raw_src = match url {
                         style::servo::url::ComputedUrl::Valid(u) => u.as_str(),
                         style::servo::url::ComputedUrl::Invalid(s) => s.as_str(),
                     };
-                    let src = extract_asset_name(raw_src);
-                    let data = a.get_image(src)?;
-
-                    use crate::image::AssetKind;
-                    match AssetKind::detect(data) {
-                        AssetKind::Raster(format) => {
-                            let (iw, ih) =
-                                ImageRender::decode_dimensions(data, format).unwrap_or((1, 1));
-                            Some((
-                                BgImageContent::Raster {
-                                    data: Arc::clone(data),
-                                    format,
-                                },
-                                iw as f32,
-                                ih as f32,
-                            ))
-                        }
-                        AssetKind::Svg => {
-                            let opts = crate::svg::sandboxed_options();
-                            match usvg::Tree::from_data(data, &opts) {
-                                Ok(tree) => {
-                                    let svg_size = tree.size();
-                                    Some((
-                                        BgImageContent::Svg {
-                                            tree: Arc::new(tree),
-                                        },
-                                        svg_size.width(),
-                                        svg_size.height(),
-                                    ))
-                                }
-                                Err(e) => {
-                                    log::warn!("failed to parse SVG background-image '{src}': {e}");
-                                    None
-                                }
-                            }
-                        }
-                        AssetKind::Unknown => None,
-                    }
-                }),
+                    url_image(ctx.assets, raw_src)
+                }
                 Image::Gradient(g) => {
                     use style::values::computed::image::Gradient;
                     // g: &Box<Gradient> なので as_ref() で &Gradient を取って match。
@@ -117,6 +80,57 @@ pub(super) fn apply_to(style: &mut BlockStyle, ctx: &StyleContext<'_>) {
                 });
             }
         }
+    }
+}
+
+/// angelito: natural sizes are CSS px; layers are laid out in pt (upstream drew 1 px as 1 pt).
+fn px_to_pt(v: f32) -> f32 {
+    v.as_px().in_pt().to_f32()
+}
+
+/// angelito: a registered image or a `data:` URL (upstream required the AssetBundle and
+/// ignored `data:`). Raster `data:` images over the pixel cap are dropped.
+fn url_image(
+    assets: Option<&crate::asset::AssetBundle>,
+    raw_src: &str,
+) -> Option<(BgImageContent, f32, f32)> {
+    let src = extract_asset_name(raw_src);
+    let data = &crate::convert::replaced::image_source(assets, src)?;
+
+    use crate::image::AssetKind;
+    match AssetKind::detect(data) {
+        AssetKind::Raster(format) => {
+            let (iw, ih) =
+                ImageRender::decode_dimensions(data, format).unwrap_or((1, 1));
+            Some((
+                BgImageContent::Raster {
+                    data: Arc::clone(data),
+                    format,
+                },
+                px_to_pt(iw as f32),
+                px_to_pt(ih as f32),
+            ))
+        }
+        AssetKind::Svg => {
+            let opts = crate::svg::sandboxed_options();
+            match usvg::Tree::from_data(data, &opts) {
+                Ok(tree) => {
+                    let svg_size = tree.size();
+                    Some((
+                        BgImageContent::Svg {
+                            tree: Arc::new(tree),
+                        },
+                        px_to_pt(svg_size.width()),
+                        px_to_pt(svg_size.height()),
+                    ))
+                }
+                Err(e) => {
+                    log::warn!("failed to parse SVG background-image '{src}': {e}");
+                    None
+                }
+            }
+        }
+        AssetKind::Unknown => None,
     }
 }
 

@@ -478,6 +478,8 @@ pub struct Drawables {
     pub li_lbl_ids: BTreeMap<NodeId, NodeId>,
     /// li NodeId → LBody 合成 NodeId（inline-root li の body タグ付け用）
     pub li_lbody_ids: BTreeMap<NodeId, NodeId>,
+    /// angelito: some visible text could not be shaped by any font (it would be dropped).
+    pub text_without_font: bool,
 }
 
 impl Default for Drawables {
@@ -504,6 +506,7 @@ impl Default for Drawables {
             synthetic_id_counter: usize::MAX / 2,
             li_lbl_ids: BTreeMap::new(),
             li_lbody_ids: BTreeMap::new(),
+            text_without_font: false,
         }
     }
 }
