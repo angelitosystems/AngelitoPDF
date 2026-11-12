@@ -25,11 +25,10 @@ aceptación se ejecuta en CI y pasa; la matriz `docs/css-support.md` se actualiz
 | Flexbox, Grid, box model, position, text-align | probado (24 pruebas de geometría) | `tests/layout.rs` |
 | `border-color` por lado | **bug: un solo color** | `per_side_border_colors` (ignorada) |
 | `@page`, margin boxes, contadores, `thead` repetido, `@media print`, `break-before` | probado | `invoice_paginates_…` |
-| `@bottom-center` | **bug: sale alineado a la izquierda** | benchmarks fase 4 |
+| margin boxes `@page` | probado; bug de alineación corregido (parche) | `tests/paged.rs` |
 | Imágenes registradas con tamaño | probado | `images_are_embedded_only_when_registered` |
-| Imágenes `data:` | **no funciona** (prueba ignorada) | `data_uri_image_is_embedded` |
-| Imágenes sin tamaño explícito | parcial | css-support.md |
-| Fuentes propias (`fonts`), `@font-face` | **sin probar** | — |
+| Imágenes `data:` (PNG/JPEG/GIF/SVG), tamaño natural | probado (con límites anti-bomba) | `tests/images.rs` |
+| Fuentes propias (`fonts`), `@font-face` | `fonts` probado; `@font-face` parcial (solo CSS enlazado) | `tests/paged.rs` |
 | SVG, gradientes, `transform`, multicolumna, enlaces, marcadores, etiquetado | Fulgur lo incluye; **sin probar** | `vendor/fulgur-blitz/src/{svg,outline,link,tagging,multicol_layout}.rs` |
 | `box-shadow: inset`, `text-shadow` | no soportado | límite del renderizador |
 | Seguridad (red, archivos, UNC, límites) | probado | `tests/security.rs` |
@@ -40,17 +39,21 @@ aceptación se ejecuta en CI y pasa; la matriz `docs/css-support.md` se actualiz
 
 Prioridad: P0 arreglar lo que ya existe y falla → P1 probar lo que se supone que funciona → P2 ampliar.
 
-### Fase 1 — Estabilizar lo existente (P0) · en curso
+### Fase 1 — Estabilizar lo existente (P0) · 1.1–1.7 hechas (2026-11-12), 1.8 pendiente
 
 | # | Tarea | Agente | Criterio de aceptación |
 |---|---|---|---|
-| 1.1 | `@bottom-center` / margin boxes centrados | pagination-typography | prueba: la x del texto del pie está centrada en la página ±1 mm; también `@top-left/right` |
-| 1.2 | Imágenes `data:` (PNG/JPEG/GIF/SVG) | rust-engine | `data_uri_image_is_embedded` deja de estar ignorada y pasa |
-| 1.3 | Imágenes sin tamaño (tamaño natural, `width` solo) | rust-engine | prueba: la imagen embebida tiene las dimensiones esperadas |
-| 1.4 | Formatos A0–A10 y B0–B10 | rust-engine | prueba de tamaño de página por formato |
-| 1.5 | Fuentes propias (`fonts`, `@font-face` con `baseDir`) | pagination-typography | prueba: la fuente aparece incrustada (subset) y el texto se extrae |
-| 1.6 | Geometría de Flexbox, Grid y box model | html-css | pruebas que leen posiciones del PDF: `justify-content`, `align-items`, `gap`, columnas de Grid, `margin`/`padding` |
-| 1.7 | `break-inside: avoid`, `break-after`, `page-break-*` | pagination-typography | prueba de texto por página |
+| 1.1 ✅ | `@bottom-center` / margin boxes centrados | pagination-typography | prueba: la x del texto del pie está centrada en la página ±1 mm; también `@top-left/right` |
+| 1.2 ✅ | Imágenes `data:` (PNG/JPEG/GIF/SVG) | rust-engine | `data_uri_image_is_embedded` deja de estar ignorada y pasa |
+| 1.3 ✅ | Imágenes sin tamaño (tamaño natural, `width` solo) | rust-engine | prueba: la imagen embebida tiene las dimensiones esperadas |
+| 1.4 ✅ | Formatos A0–A10 y B0–B10 | rust-engine | prueba de tamaño de página por formato |
+| 1.5 ✅ parcial | Fuentes propias (`fonts`, `@font-face` con `baseDir`) | pagination-typography | prueba: la fuente aparece incrustada (subset) y el texto se extrae |
+| 1.6 ✅ | Geometría de Flexbox, Grid y box model | html-css | pruebas que leen posiciones del PDF: `justify-content`, `align-items`, `gap`, columnas de Grid, `margin`/`padding` |
+| 1.7 ✅ | `break-inside: avoid`, `break-after`, `page-break-*` | pagination-typography | prueba de texto por página |
+| 1.9 | `@font-face` en `<style>` inline y descriptor `font-family` (blitz-dom `process_style_element`; vendorizar `blitz-traits`) | pagination-typography | prueba con `<style>@font-face{font-family:Mi;src:url(...)}</style>` y `font-family:Mi` |
+| 1.10 | Tamaño natural de imágenes registradas solo con `images` (pasar el AssetBundle al net provider) y `background-image: url(data:)` | rust-engine | prueba de tamaño sin width/height |
+| 1.11 | Ejecutar en CI las pruebas unitarias de los crates vendorizados con nuestros parches (hoy cargo no las corre: no son miembros del workspace) | devops | job que corre `cargo test --lib` de fulgur-blitz/blitz-dom parcheados |
+| 1.12 | `systemFonts:false` sin fuentes: hoy el texto desaparece sin error → devolver `Error::Render` | rust-engine | prueba que espera el error |
 | 1.8 | `border-color` distinto por lado (hoy pinta los 4 lados con el color de arriba) | rust-engine | `per_side_border_colors` (layout.rs) deja de estar ignorada y pasa |
 
 ### Fase 2 — Probar lo heredado del renderizador (P1)
@@ -68,7 +71,7 @@ dinámicos (Fulgur trae `gcpm/string_set.rs` y `running.rs`), numeración por se
 
 ### Fase 4 — Integraciones (P1)
 
-Laravel: `orientation()`, `pageNumbers()` (CSS `@page` generado, depende de 1.1), `fonts()`, `css()`,
+Laravel: ✅ `orientation()`, ✅ `pageNumbers()`, `fonts()`, `css()`,
 `header()/footer()`. Node/NestJS con napi-rs (fase 3b de AGENTS.md). CLI: `--options-file`, para opciones de más de 32 KB en Windows.
 `printBackground()` solo si el motor puede desactivar fondos; si no puede, no se añade (sería un no-op).
 

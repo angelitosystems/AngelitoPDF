@@ -156,9 +156,11 @@ Route::get('/hola', fn () =>
         </tbody></table>
         <h2>Configurar</h2>
         <table className="api"><tbody>
-          <tr><td><code>-&gt;format('A4')</code></td><td>A3, A4, A5, B4, B5, Letter, Legal o Ledger.</td></tr>
+          <tr><td><code>-&gt;format('A4')</code></td><td>A0–A10, B0–B10, Letter, Legal o Ledger.</td></tr>
+          <tr><td><code>-&gt;orientation('portrait')</code></td><td><code>'portrait'</code> o <code>'landscape'</code>.</td></tr>
           <tr><td><code>-&gt;landscape()</code></td><td>Orientación horizontal. <code>landscape(false)</code> la desactiva.</td></tr>
           <tr><td><code>-&gt;margin(10)</code></td><td>Margen en mm. Acepta <code>margin(v, h)</code> o <code>margin(t, r, b, l)</code>.</td></tr>
+          <tr><td><code>-&gt;pageNumbers()</code></td><td>Pie «Página N de M» en cada página. Personalizable: <code>{"pageNumbers(text: '{page}/{pages}', position: 'top-right')"}</code>.</td></tr>
           <tr><td><code>-&gt;options([...])</code></td><td>Cualquier otra opción del motor; mira <A to="opciones">Opciones</A>. Las claves desconocidas se rechazan.</td></tr>
         </tbody></table>
         <h2>Obtener el PDF</h2>
@@ -338,14 +340,16 @@ Pdf::view('reportes.ventas', ['filas' => Venta::whereYear('fecha', 2026)->get()]
       <>
         <p className="lead">Por seguridad el motor no lee archivos ni accede a la red. Los recursos se le pasan de forma explícita.</p>
         <h2>Imágenes</h2>
-        <p>Registra cada imagen con un nombre y úsalo como <code>src</code>. Indica siempre <code>width</code> y <code>height</code>.</p>
+        <p>Hay dos formas. La más simple es incrustarla como <code>data:</code>; el motor no toca disco ni red:</p>
+        <Code lang="blade">{`<img src="data:image/png;base64,{{ base64_encode(file_get_contents(public_path('img/logo.png'))) }}" width="120" alt="Logo">`}</Code>
+        <p>PNG, JPEG y GIF (hasta 32 MiB y 40 megapíxeles, para frenar «bombas» de descompresión) y SVG, que se dibuja como vector. Si indicas solo <code>width</code> o solo <code>height</code>, se mantiene la proporción. La otra forma es registrar un archivo con un nombre y usarlo como <code>src</code>; en ese caso indica <code>width</code> y <code>height</code>:</p>
         <Code lang="php">{`
 Pdf::view('facturas.show', compact('factura'))
     ->options(['images' => ['logo' => public_path('img/logo.png')]])
     ->download('f.pdf');`}</Code>
         <Code lang="html">{`<img src="logo" width="120" height="40" alt="Logo">`}</Code>
         <Note kind="warn" title="Aún no soportado">
-          <code>&lt;img src="data:..."&gt;</code> todavía no funciona. Las imágenes sin tamaño explícito tienen soporte parcial.
+          <code>background-image: url(data:…)</code> todavía no funciona; usa <code>&lt;img&gt;</code>.
         </Note>
         <h2>Hojas de estilo (Tailwind compilado, etc.)</h2>
         <Code lang="php">{`
@@ -355,8 +359,9 @@ Pdf::view('facturas.show', compact('factura'))
         <p>Con <code>baseDir</code> el motor solo lee dentro de esa carpeta: bloquea <code>..</code> y las rutas UNC.</p>
         <h2>Fuentes</h2>
         <Code lang="php">{`->options(['fonts' => [resource_path('fonts/Inter-Regular.ttf')], 'systemFonts' => false])`}</Code>
-        <Note title="Sin prueba propia">
-          Según el renderizador, se pueden incrustar fuentes TTF/OTF/TTC/WOFF2, pero todavía no tenemos una prueba propia que lo confirme (fase 2).
+        <p>La fuente se incrusta como subconjunto (solo los glifos usados) y el texto sigue siendo seleccionable y buscable.</p>
+        <Note kind="warn" title="@font-face">
+          <code>@font-face</code> funciona solo desde una hoja enlazada (<code>&lt;link&gt;</code> o <code>@import</code>) dentro de <code>baseDir</code>, y <code>font-family</code> debe ser el nombre interno de la fuente. Dentro de <code>&lt;style&gt;</code> se ignora: usa la opción <code>fonts</code>.
         </Note>
       </>
     ),
@@ -387,7 +392,7 @@ Pdf::view('facturas.show', compact('factura'))
           <thead><tr><th>Clave</th><th>Tipo</th><th>Por defecto</th><th>Descripción</th></tr></thead>
           <tbody>
             {[
-              ['format', 'string', '"A4"', 'A3, A4, A5, B4, B5, Letter, Legal, Ledger'],
+              ['format', 'string', '"A4"', 'A0–A10, B0–B10, Letter, Legal, Ledger'],
               ['widthMm, heightMm', 'number', '—', 'Tamaño a medida en mm. Hacen falta los dos.'],
               ['landscape', 'bool', 'false', 'Orientación horizontal'],
               ['margin', 'number | [t,r,b,l]', '@page del CSS', 'Margen en milímetros'],
@@ -451,17 +456,23 @@ let pdf: Vec<u8> = engine.render("<h1>Factura</h1>")?;`}</Code>
           <tbody>
             {[
               ['Texto, encabezados, colores, UTF-8 y acentos', 'Soportado'],
-              ['display: flex / grid', 'Soportado (solo revisión visual)'],
+              ['display: flex (justify, align, gap, grow/shrink, wrap, direction)', 'Soportado'],
+              ['display: grid (px/fr, repeat, gap, span, template-areas)', 'Soportado'],
+              ['Box model, margin auto y colapso, box-sizing, inline-block, position relative/absolute, text-align', 'Soportado'],
               ['Tablas de varias páginas, thead repetido', 'Soportado'],
               ['@page size/margin, margin boxes, counter(page) / counter(pages)', 'Soportado'],
-              ['@media print / screen, break-before: page', 'Soportado'],
-              ['Formatos A3–Ledger, landscape, mm a medida (58/80 mm)', 'Soportado'],
-              ['border, border-radius, box-shadow exterior', 'Soportado (solo revisión visual)'],
-              ['<img> registrada con width y height', 'Soportado'],
+              ['Margin boxes alineados (izquierda/centro/derecha)', 'Soportado'],
+              ['@media print / screen, break-before/after, break-inside: avoid, page-break-*', 'Soportado'],
+              ['Formatos A0–A10, B0–B10, Letter/Legal/Ledger, landscape, mm a medida (58/80 mm)', 'Soportado'],
+              ['border uniforme, background-color', 'Soportado'],
+              ['border-color distinto por lado', 'Bug: pinta todos los lados del color superior'],
+              ['border-radius, box-shadow exterior', 'Soportado (solo revisión visual)'],
+              ['<img> data: PNG/JPEG/GIF/SVG, tamaño natural y proporción', 'Soportado'],
+              ['Fuentes propias (opción fonts)', 'Soportado'],
+              ['@font-face en hoja enlazada / en <style>', 'Parcial / No soportado'],
               ['<link rel=stylesheet> / @import dentro de baseDir', 'Soportado'],
               ['Plantillas MiniJinja con datos', 'Soportado'],
-              ['break-inside: avoid, fuentes propias, SVG inline, transform, gradientes', 'Lo afirma el renderizador, sin prueba propia'],
-              ['<img src="data:...">', 'Pendiente'],
+              ['SVG inline, transform, gradientes, multicolumna', 'Lo afirma el renderizador, sin prueba propia'],
               ['box-shadow inset, text-shadow', 'No soportado'],
               ['Recursos http(s), JavaScript', 'Bloqueado a propósito'],
             ].map(([f, s]) => <tr key={f}><td>{f}</td><td>{s}</td></tr>)}

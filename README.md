@@ -11,15 +11,15 @@ By **Angelito Systems S.A.C.**
 ## What works today
 
 - HTML string or file → PDF bytes or file, in memory, no temporary files.
-- Page formats A3/A4/A5/B4/B5/Letter/Legal/Ledger, landscape, custom size in mm (thermal tickets 58/80 mm), margins.
+- Page formats A0–A10, B0–B10, Letter/Legal/Ledger, landscape, custom size in mm (thermal tickets 58/80 mm), margins.
 - `@page` margin boxes with `Página N de M`, `@media print`, `break-before`, multi-page tables with repeated `thead`.
 - Flexbox, Grid, borders, radius, outer shadows (via the [Fulgur](https://github.com/fulgur-rs/fulgur) renderer).
 - Templates with JSON data (MiniJinja, HTML auto-escaped).
 - Title/author/lang metadata.
 - Secure defaults: no network, no local file reads unless `baseDir` is set (and confined to it, UNC paths blocked), 10 MiB input cap, nesting-depth cap, template CPU cap. Details and open issues: [docs/security.md](docs/security.md).
 
-Full, test-backed list: [docs/css-support.md](docs/css-support.md). Known gaps: `data:` image URIs,
-images without explicit size, `text-shadow`, inset shadows.
+Full, test-backed list: [docs/css-support.md](docs/css-support.md). Known gaps: per-side `border-color`,
+`@font-face` in inline `<style>`, `text-shadow`, inset shadows. Plan: [docs/ROADMAP.md](docs/ROADMAP.md).
 
 ## Laravel
 
@@ -70,7 +70,7 @@ Exit codes: `0` ok, `1` render/IO error, `2` invalid options. Errors go to stder
 
 | Key | Type | Default | |
 |---|---|---|---|
-| `format` | string | `"A4"` | A3, A4, A5, B4, B5, Letter, Legal, Ledger |
+| `format` | string | `"A4"` | A0–A10, B0–B10, Letter, Legal, Ledger |
 | `widthMm`, `heightMm` | number | — | custom size, both required |
 | `landscape` | bool | `false` | |
 | `margin` | number \| [t,r,b,l] | CSS `@page` | millimetres |

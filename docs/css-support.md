@@ -24,13 +24,16 @@ Angelito PDF Engine is **not** a full HTML5/CSS browser engine.
 | `break-before/after: page`, `page-break-before/after: always` | Supported | `forced_breaks_and_legacy_aliases_start_a_new_page` |
 | `break-inside: avoid` / `avoid-page` / `page-break-inside: avoid` on blocks | Supported (alias: our patch) | `break_inside_avoid_keeps_a_block_on_one_page` |
 | `break-inside: avoid` on table rows | Supported | `table_rows_with_break_inside_avoid_are_never_split` |
-| Page sizes A3/A4/A5/B4/B5/Letter/Legal/Ledger, landscape, custom mm (tickets 58/80 mm) | Supported | `page_formats_orientation_and_ticket_sizes` |
+| Page sizes A0–A10, B0–B10, Letter/Legal/Ledger, landscape, custom mm (tickets 58/80 mm) | Supported | `page_formats_orientation_and_ticket_sizes`, `iso_216_a_and_b_series` |
 | Per-side border colours (`border-color: a b c d`) | **Partial (bug)** | ignored test `per_side_border_colors`: one stroke in the top colour for all four sides |
 | `border-radius`, `box-shadow` (outer) | Supported (visual check only) | invoice fixture; no geometry test yet |
 | `box-shadow: inset`, `text-shadow` | **Not supported** | renderer limitation |
 | `<img>` PNG/JPEG/GIF registered via `images` option + explicit width & height | Supported | `images_are_embedded_only_when_registered` |
-| `<img>` with only width / natural size | Partial | needs file also under `baseDir`; automatic in phase 2 |
-| `<img src="data:...">` | **Pending** | ignored test `data_uri_image_is_embedded` |
+| `<img>` natural size / only `width` or `height` (keeps ratio) | Supported for `data:` and files under `baseDir`; **Partial** for images registered only via `images` (need explicit width & height) | `natural_size_and_aspect_ratio` |
+| `<img src="data:image/png\|jpeg\|gif;base64,…">` | Supported (≤ 32 MiB per URL, ≤ 40 MP) | `data_uri_raster_formats_are_embedded`, `data_uri_size_cap`, `data_uri_decompression_bomb_is_not_embedded` |
+| `<img src="data:image/svg+xml,…">` | Supported, drawn as vectors | `data_uri_svg_is_drawn_as_vector` |
+| `<link rel=stylesheet href="data:text/css,…">` | Supported without `baseDir` | `data_uri_stylesheet_applies_without_base_dir` |
+| `background-image: url(data:…)` | Not supported yet | reads only registered `images` |
 | `<link rel=stylesheet>` / `@import` inside `baseDir` | Supported | `base_dir_allows_inside_and_blocks_traversal` |
 | Extra CSS (`css` option, e.g. compiled Tailwind) | Renderer claims | Tailwind build not tested yet |
 | Custom fonts (`fonts` option) | Supported | `fonts_option_embeds_the_font` (subset + FontFile2, text extractable) |

@@ -62,7 +62,7 @@ try {
     await links.nth(1).click()
     await p.waitForFunction(() => document.querySelector('aside[aria-label="En esta página"] [aria-current="location"]')?.textContent === 'Lee esto antes de citar cifras')
     assert.ok(p.url().endsWith('#/docs/benchmarks/lee-esto-antes-de-citar-cifras'))
-    await p.mouse.wheel(0, -5000)
+    await p.evaluate(() => window.scrollTo(0, 0)) // not mouse.wheel: the pointer still sits over the (scrollable) TOC after the click
     await p.waitForFunction(() => document.querySelector('aside[aria-label="En esta página"] [aria-current="location"]')?.textContent === 'Todos los datos')
     ok('TOC: click → smooth scroll + active; scroll → active follows')
 

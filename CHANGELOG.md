@@ -4,6 +4,22 @@ Format: [Keep a Changelog](https://keepachangelog.com/). Versioning: SemVer.
 
 ## [Unreleased]
 
+### Added
+- `<img src="data:…">` PNG/JPEG/GIF (≤ 32 MiB, ≤ 40 MP, anti decompression-bomb) and SVG drawn as vectors; `data:` stylesheets.
+- Intrinsic image size and aspect ratio when only `width`/`height` (or neither) is given.
+- Page formats A0–A10 and B0–B10.
+- Laravel: `->orientation('portrait'|'landscape')`, `->pageNumbers(text, position)`.
+- Tests: 24 layout-geometry tests (flex, grid, box model, position), 8 paged-media tests, 7 image tests.
+
+### Fixed
+- `@page` margin boxes used `text-align: start`: `@bottom-center` footers were left-aligned (CSS Paged Media §4.2 defaults now applied).
+- `page-break-inside: avoid` was ignored (legacy alias).
+- JPEG/GIF images had no intrinsic size.
+
+### Known issues
+- Per-side `border-color` paints all sides with the top colour (test `per_side_border_colors`, ignored).
+- `@font-face` in inline `<style>` is ignored; the `font-family` descriptor is ignored.
+
 ## [0.1.1] - 2026-11-11
 
 ### Fixed
