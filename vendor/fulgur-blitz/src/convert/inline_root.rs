@@ -611,6 +611,13 @@ pub(super) fn extract_paragraph(
         accumulated_line_top += line_height;
     }
 
+    // angelito: visible text with no shaped glyph means no font could draw it (system fonts
+    // off, none registered); flag it so the engine errors instead of silently dropping text.
+    let has_glyphs = shaped_lines.iter().flat_map(|l| &l.items).any(|i| matches!(i, LineItem::Text(r) if !r.glyphs.is_empty()));
+    if !has_glyphs && !text.trim().is_empty() {
+        out.text_without_font = true;
+    }
+
     if shaped_lines.is_empty() {
         return None;
     }

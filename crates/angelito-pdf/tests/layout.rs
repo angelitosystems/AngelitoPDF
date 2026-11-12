@@ -478,12 +478,48 @@ fn inline_block_flows_horizontally() {
     close(p.fill(G).x, px(100.0), "inline-block 2 x");
 }
 
+fn painted(p: &Page, hex: u32) -> usize {
+    p.fills.iter().chain(&p.strokes).filter(|r| same_rgb(r.rgb, hex)).count()
+}
+
 #[test]
-#[ignore = "bug: border-color with 4 different side colours paints one stroked rectangle in the top colour (#ff0000) for all sides; right/bottom/left colours are never painted"]
 fn per_side_border_colors() {
     let p = one_page("<div style='width:100px;height:40px;border-style:solid;border-width:4px;border-color:#ff0000 #00ff00 #0000ff #ffff00'></div>");
-    let any = |hex: u32| p.fills.iter().chain(&p.strokes).filter(|r| same_rgb(r.rgb, hex)).count();
     for c in [R, G, B, 0xffff00] {
-        assert_eq!(any(c), 1, "side colour #{c:06x} painted once; fills {:?} strokes {:?}", p.fills, p.strokes);
+        assert_eq!(painted(&p, c), 1, "side colour #{c:06x} painted once; fills {:?} strokes {:?}", p.fills, p.strokes);
     }
+    // Each side covers its border area; adjacent sides meet on the corner diagonal.
+    assert_box(p.fill(R), 0.0, 0.0, 108.0, 4.0, "top");
+    assert_box(p.fill(G), 104.0, 0.0, 4.0, 48.0, "right");
+    assert_box(p.fill(B), 0.0, 44.0, 108.0, 4.0, "bottom");
+    assert_box(p.fill(0xffff00), 0.0, 0.0, 4.0, 48.0, "left");
+}
+
+#[test]
+fn per_side_border_widths() {
+    // border box = (100 + 2 + 4) x (40 + 1 + 3)
+    let p = one_page("<div style='width:100px;height:40px;border-style:solid;border-width:1px 2px 3px 4px;border-color:#ff0000 #00ff00 #0000ff #ffff00'></div>");
+    assert_box(p.fill(R), 0.0, 0.0, 106.0, 1.0, "top");
+    assert_box(p.fill(G), 104.0, 0.0, 2.0, 44.0, "right");
+    assert_box(p.fill(B), 0.0, 41.0, 106.0, 3.0, "bottom");
+    assert_box(p.fill(0xffff00), 0.0, 0.0, 4.0, 44.0, "left");
+    // One colour, different widths: still all four sides.
+    let p = one_page("<div style='width:100px;height:40px;border:solid #336699;border-width:1px 2px 3px 4px'></div>");
+    assert_eq!(painted(&p, 0x336699), 4, "fills {:?} strokes {:?}", p.fills, p.strokes);
+}
+
+#[test]
+fn per_side_border_styles() {
+    // `none` sides compute to width 0: nothing painted and the box shrinks on that axis.
+    let p = one_page("<div style='width:100px;height:40px;border-width:4px;border-style:solid none;border-color:#ff0000 #00ff00 #0000ff #ffff00'></div>");
+    assert_eq!((painted(&p, G), painted(&p, 0xffff00)), (0, 0), "fills {:?} strokes {:?}", p.fills, p.strokes);
+    assert_box(p.fill(R), 0.0, 0.0, 100.0, 4.0, "top");
+    assert_box(p.fill(B), 0.0, 44.0, 100.0, 4.0, "bottom");
+    // solid top + dashed right: the dashed side is stroked on its centre line in its own colour.
+    let p = one_page("<div style='width:100px;height:40px;border-width:4px;border-style:solid dashed none none;border-color:#ff0000 #00ff00'></div>");
+    assert_box(p.fill(R), 0.0, 0.0, 104.0, 4.0, "solid top");
+    let s = p.stroke(G);
+    close(s.lw, px(4.0), "dashed width");
+    close(s.x, px(102.0), "dashed centre line x");
+    assert_eq!(painted(&p, R) + painted(&p, G), 2, "fills {:?} strokes {:?}", p.fills, p.strokes);
 }

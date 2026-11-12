@@ -8,9 +8,14 @@ use crate::draw_primitives::{BlockStyle, BorderStyleValue};
 use crate::units::F32Units;
 
 pub(super) fn apply_to(style: &mut BlockStyle, ctx: &StyleContext<'_>) {
-    // Border color (use top border color for all sides for simplicity)
-    let bc = ctx.styles.clone_border_top_color();
-    style.border_color = absolute_to_rgba(bc.resolve_to_absolute(ctx.current_color));
+    // angelito: one colour per side (upstream used the top colour for all four).
+    let rgba = |c: style::values::computed::Color| absolute_to_rgba(c.resolve_to_absolute(ctx.current_color));
+    style.border_colors = [
+        rgba(ctx.styles.clone_border_top_color()),
+        rgba(ctx.styles.clone_border_right_color()),
+        rgba(ctx.styles.clone_border_bottom_color()),
+        rgba(ctx.styles.clone_border_left_color()),
+    ];
 
     // Border radii. Stylo evaluates length-percentage values in CSS px
     // space, so we feed it the CSS-px border-box basis and convert the

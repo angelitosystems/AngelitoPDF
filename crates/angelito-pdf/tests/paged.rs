@@ -206,8 +206,9 @@ fn font_face_in_linked_stylesheet_resolves_against_base_dir() {
     assert_noto_embedded(&doc);
     assert!(page_texts(&doc).concat().contains("Texto de marca"));
     // Without baseDir neither the stylesheet nor the font is read (local files are opt-in).
-    let none = parse(&render(html, &RenderOptions { system_fonts: false, ..Default::default() }).unwrap());
-    assert!(!embedded_fonts(&none).iter().any(|(n, _)| n.contains("NotoSans")));
+    // With system fonts off that leaves no font at all, which is reported instead of dropping the text.
+    let none = render(html, &RenderOptions { system_fonts: false, ..Default::default() });
+    assert!(matches!(none, Err(angelito_pdf::Error::Render(ref m)) if m.contains("no font")), "{:?}", none.map(|b| b.len()));
 }
 
 fn paged_dir() -> RenderOptions {

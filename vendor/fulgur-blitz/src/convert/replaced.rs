@@ -190,6 +190,19 @@ fn within_pixel_cap(data: &[u8], format: crate::image::ImageFormat) -> bool {
         .is_some_and(|(w, h)| u64::from(w) * u64::from(h) <= MAX_DATA_URL_PIXELS)
 }
 
+/// angelito: image bytes for `src`: a registered image first, then an in-memory `data:` URL
+/// (never disk/network). Raster `data:` images over [`MAX_DATA_URL_PIXELS`] are rejected.
+pub(crate) fn image_source(assets: Option<&AssetBundle>, src: &str) -> Option<Arc<Vec<u8>>> {
+    if let Some(d) = assets.and_then(|b| b.get_image(src)) {
+        return Some(Arc::clone(d));
+    }
+    let (bytes, _) = crate::net::decode_data_url(src.trim())?;
+    match ImageRender::detect_format(&bytes) {
+        Some(f) if !within_pixel_cap(&bytes, f) => None,
+        _ => Some(Arc::new(bytes)),
+    }
+}
+
 /// Convert an `<img>` element into an `ImageEntry`, plus a wrapping
 /// `BlockEntry` when the element has visual styling.
 fn convert_image(
@@ -204,21 +217,10 @@ fn convert_image(
     let Some(src) = get_attr(elem, "src") else {
         return false;
     };
-    // angelito: registered images first, then in-memory `data:` URLs (never disk/network).
-    let (data, untrusted) = match assets.and_then(|b| b.get_image(src)) {
-        Some(d) => (Arc::clone(d), false),
-        None => match crate::net::decode_data_url(src.trim()) {
-            Some((bytes, _)) => (Arc::new(bytes), true),
-            None => return false,
-        },
+    let Some(data) = image_source(assets, src) else {
+        return false;
     };
-    let format = ImageRender::detect_format(&data);
-    if let (true, Some(f)) = (untrusted, format) {
-        if !within_pixel_cap(&data, f) {
-            return false;
-        }
-    }
-    let Some(format) = format else {
+    let Some(format) = ImageRender::detect_format(&data) else {
         // angelito: SVG behind `<img>` (upstream drew only raster `<img>`).
         let Ok(tree) = usvg::Tree::from_data(&data, &crate::svg::sandboxed_options()) else {
             return false;

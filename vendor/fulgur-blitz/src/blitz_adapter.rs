@@ -299,12 +299,35 @@ pub(crate) fn parse_html_with_local_resources_with_link_nodes(
     system_fonts: bool,
     base_path: Option<&Path>,
 ) -> ParsedWithLocalResources {
+    parse_html_with_registered_images(
+        html,
+        viewport_width,
+        viewport_height_px,
+        font_data,
+        system_fonts,
+        base_path,
+        None,
+    )
+}
+
+/// angelito: same as [`parse_html_with_local_resources_with_link_nodes`], but `images`
+/// (the engine's AssetBundle) is served to Blitz by name, so registered images get their
+/// intrinsic size without a base directory and without reading any other file.
+pub(crate) fn parse_html_with_registered_images(
+    html: &str,
+    viewport_width: f32,
+    viewport_height_px: u32,
+    font_data: &[Arc<Vec<u8>>],
+    system_fonts: bool,
+    base_path: Option<&Path>,
+    images: Option<Arc<crate::asset::AssetBundle>>,
+) -> ParsedWithLocalResources {
     use std::collections::HashMap;
     use std::collections::HashSet;
 
-    let net_provider = Arc::new(crate::net::FulgurNetProvider::new(
-        base_path.map(|p| p.to_path_buf()),
-    ));
+    let net_provider = Arc::new(
+        crate::net::FulgurNetProvider::new(base_path.map(|p| p.to_path_buf())).with_images(images),
+    );
     let provider: Arc<dyn NetProvider<Resource>> = net_provider.clone();
     let base_url = base_path.and_then(canonical_directory_url);
 

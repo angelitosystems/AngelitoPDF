@@ -123,6 +123,20 @@ fn template_data_is_rendered_and_html_escaped() {
 }
 
 #[test]
+fn text_without_any_font_is_an_error() {
+    let o = RenderOptions { system_fonts: false, ..Default::default() };
+    match render("<p>Hola</p>", &o) {
+        Err(Error::Render(m)) => assert!(m.contains("no font"), "{m}"),
+        other => panic!("expected Error::Render, got {:?}", other.map(|b| b.len())),
+    }
+    // Documents without text still render; whitespace alone is not text.
+    let png = "iVBORw0KGgoAAAANSUhEUgAAAAQAAAAECAIAAAAmkwkpAAAAEElEQVR4nGM4wcAARwzEcQBRwwyB7RhOggAAAABJRU5ErkJggg==";
+    let html = format!("<div style='width:10px;height:10px;background:red'></div>\n  <p> </p><p> <img src='data:image/png;base64,{png}'> </p>");
+    let doc = parse(&render(&html, &o).unwrap());
+    assert_eq!((doc.get_pages().len(), image_count(&doc)), (1, 1));
+}
+
+#[test]
 fn metadata_is_written() {
     let o = RenderOptions { title: Some("Factura F001".into()), author: Some("Angelito Systems".into()), ..Default::default() };
     let doc = parse(&render("<p>x</p>", &o).unwrap());
@@ -168,7 +182,8 @@ fn images_are_embedded_only_when_registered() {
     let reg = RenderOptions { images: [("logo.png".into(), format!("{fixtures}/logo.png").into())].into(), ..Default::default() };
     let sized = r#"<img style="width:40px;height:40px" src="logo.png">"#;
     assert_eq!(image_count(&parse(&render(sized, &reg).unwrap())), 1);
-    // shortcut: intrinsic size needs the file reachable under baseDir too; phase 2 resolves <img src> automatically.
+    // Registered without baseDir and without height: the intrinsic size comes from the registered bytes.
+    assert_eq!(image_count(&parse(&render(html, &reg).unwrap())), 1);
     let both = RenderOptions { base_dir: Some(fixtures.into()), ..reg };
     assert_eq!(image_count(&parse(&render(html, &both).unwrap())), 1);
     let missing = RenderOptions { images: [("x.png".into(), "no/such.png".into())].into(), ..Default::default() };

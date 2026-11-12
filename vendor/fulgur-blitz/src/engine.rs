@@ -11,7 +11,8 @@ use std::path::{Path, PathBuf};
 /// Reusable PDF generation engine.
 pub struct Engine {
     config: Config,
-    assets: Option<AssetBundle>,
+    // angelito: shared with the net provider so registered images get an intrinsic size.
+    assets: Option<std::sync::Arc<AssetBundle>>,
     base_path: Option<PathBuf>,
     template: Option<(String, String)>,
     data: Option<serde_json::Value>,
@@ -94,7 +95,7 @@ impl Engine {
     }
 
     pub fn assets(&self) -> Option<&AssetBundle> {
-        self.assets.as_ref()
+        self.assets.as_deref()
     }
 
     /// Font byte-blobs registered on the [`AssetBundle`], or an empty slice
@@ -200,13 +201,14 @@ impl Engine {
         // default browser styles even though their content resolved
         // correctly.
         let (mut doc, link_gcpm, link_column_css, link_gcpm_by_node) =
-            crate::blitz_adapter::parse_html_with_local_resources_with_link_nodes(
+            crate::blitz_adapter::parse_html_with_registered_images(
                 &html,
                 self.config.content_width().as_pt().in_px().to_f32(),
                 self.config.page_height().as_pt().in_px().to_f32() as u32,
                 fonts,
                 self.system_fonts,
                 self.base_path.as_deref(),
+                self.assets.clone(),
             );
         gcpm.extend_from(link_gcpm);
 
@@ -717,7 +719,7 @@ impl Engine {
 
         let mut convert_ctx = ConvertContext {
             running_store: &running_store,
-            assets: self.assets.as_ref(),
+            assets: self.assets.as_deref(),
             font_cache: HashMap::new(),
             string_set_by_node,
             counter_ops_by_node: counter_ops_map,
@@ -733,6 +735,12 @@ impl Engine {
         };
 
         let drawables = crate::convert::dom_to_drawables(&doc, &mut convert_ctx);
+        // angelito: upstream rendered such text as nothing, without error.
+        if drawables.text_without_font {
+            return Err(crate::error::Error::Layout(
+                "no font available to draw the document text: enable system fonts or register a font".into(),
+            ));
+        }
         let html_title = crate::blitz_adapter::extract_html_title(&doc);
         let html_lang = crate::blitz_adapter::extract_html_lang(&doc);
         // Reclaim the post-convert geometry without partially moving
@@ -939,13 +947,14 @@ impl Engine {
         let fonts = self.fonts();
 
         let (mut doc, _link_gcpm, link_column_css, _link_gcpm_by_node) =
-            crate::blitz_adapter::parse_html_with_local_resources_with_link_nodes(
+            crate::blitz_adapter::parse_html_with_registered_images(
                 html,
                 self.config.content_width().as_pt().in_px().to_f32(),
                 self.config.page_height().as_pt().in_px().to_f32() as u32,
                 fonts,
                 self.system_fonts,
                 self.base_path.as_deref(),
+                self.assets.clone(),
             );
 
         let ctx = crate::blitz_adapter::PassContext { font_data: fonts };
@@ -970,7 +979,7 @@ impl Engine {
         let running_store = crate::gcpm::running::RunningElementStore::new();
         let mut convert_ctx = ConvertContext {
             running_store: &running_store,
-            assets: self.assets.as_ref(),
+            assets: self.assets.as_deref(),
             font_cache: HashMap::new(),
             string_set_by_node: HashMap::new(),
             counter_ops_by_node: HashMap::new(),
@@ -1006,13 +1015,14 @@ impl Engine {
         let fonts = self.fonts();
 
         let (mut doc, _link_gcpm, link_column_css, _link_gcpm_by_node) =
-            crate::blitz_adapter::parse_html_with_local_resources_with_link_nodes(
+            crate::blitz_adapter::parse_html_with_registered_images(
                 html,
                 self.config.content_width().as_pt().in_px().to_f32(),
                 self.config.page_height().as_pt().in_px().to_f32() as u32,
                 fonts,
                 self.system_fonts,
                 self.base_path.as_deref(),
+                self.assets.clone(),
             );
 
         let ctx = crate::blitz_adapter::PassContext { font_data: fonts };
@@ -1073,7 +1083,7 @@ impl Engine {
         let running_store = crate::gcpm::running::RunningElementStore::new();
         let mut convert_ctx = ConvertContext {
             running_store: &running_store,
-            assets: self.assets.as_ref(),
+            assets: self.assets.as_deref(),
             font_cache: HashMap::new(),
             string_set_by_node: HashMap::new(),
             counter_ops_by_node: HashMap::new(),
@@ -1455,7 +1465,7 @@ impl EngineBuilder {
 
         Engine {
             config: self.config_builder.build(),
-            assets: self.assets,
+            assets: self.assets.map(std::sync::Arc::new),
             base_path: self.base_path,
             template: self.template,
             data: self.data,

@@ -180,3 +180,40 @@ fn data_uri_stylesheet_applies_without_base_dir() {
     let text = doc.extract_text(&[1]).unwrap();
     assert!(text.contains("VISIBLE") && !text.contains("OCULTO"), "{text:?}");
 }
+
+fn fixtures() -> std::path::PathBuf {
+    std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("../../tests/fixtures")
+}
+
+#[test]
+fn registered_image_has_natural_size_without_base_dir() {
+    // logo.png is 8x8: no width/height and no baseDir -> 8 CSS px = 6 pt.
+    let names = ["logo.png", "mi logo ñ.png"];
+    let o = RenderOptions { images: names.map(|n| (n.into(), fixtures().join("logo.png"))).into(), ..Default::default() };
+    for n in names {
+        let d = drawn_images(&format!(r#"<img src="{n}">"#), &o);
+        assert_eq!(d.len(), 1, "{n}");
+        assert_box(&d[0], (8, 8), (6.0, 6.0));
+    }
+    // Width only: height follows the 1:1 ratio.
+    assert_box(&drawn_images(r#"<img style="width:40px" src="logo.png">"#, &o)[0], (8, 8), (30.0, 30.0));
+    // Only registered names are served: an existing but unregistered file stays unread.
+    let html = format!(r#"<img src="{}">"#, fixtures().join("logo.png").display());
+    assert!(drawn_images(&html, &o).is_empty());
+}
+
+#[test]
+fn background_image_data_uri() {
+    let html = format!(
+        "<div style=\"width:40px;height:40px;background-repeat:no-repeat;background-size:40px 40px;background-image:url('data:image/png;base64,{PNG_4X4}')\"></div>"
+    );
+    let d = drawn_images(&html, &RenderOptions::default());
+    assert_eq!(d.len(), 1, "{d:?}");
+    assert_box(&d[0], (4, 4), (30.0, 30.0));
+    // background-size auto: the natural size, 4 CSS px = 3 pt.
+    let html = format!("<div style=\"width:40px;height:40px;background:url(data:image/png;base64,{PNG_4X4}) no-repeat\"></div>");
+    assert_box(&drawn_images(&html, &RenderOptions::default())[0], (4, 4), (3.0, 3.0));
+    // Same pixel cap as <img>.
+    let bomb = format!("<div style=\"width:10px;height:10px;background-image:url(data:image/png;base64,{PNG_BOMB_48MP})\"></div>");
+    assert!(drawn_images(&bomb, &RenderOptions::default()).is_empty());
+}

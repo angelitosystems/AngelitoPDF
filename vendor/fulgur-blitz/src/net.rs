@@ -74,12 +74,38 @@ pub(crate) fn decode_data_url(url: &str) -> Option<(Vec<u8>, bool)> {
     Some((bytes, is_css))
 }
 
+/// angelito: lets Blitz read a registered image straight from the bundle's buffer (no copy).
+struct SharedBuf(Arc<Vec<u8>>);
+impl AsRef<[u8]> for SharedBuf {
+    fn as_ref(&self) -> &[u8] {
+        &self.0
+    }
+}
+
+/// angelito: `%XX` decoding for the path of a `file:` URL (`mi%20logo.png` → `mi logo.png`).
+fn percent_decode(s: &str) -> Option<String> {
+    let (b, mut out, mut i) = (s.as_bytes(), Vec::with_capacity(s.len()), 0);
+    while i < b.len() {
+        if b[i] == b'%' {
+            let hex = std::str::from_utf8(b.get(i + 1..i + 3)?).ok()?;
+            out.push(u8::from_str_radix(hex, 16).ok()?);
+            i += 3;
+        } else {
+            out.push(b[i]);
+            i += 1;
+        }
+    }
+    String::from_utf8(out).ok()
+}
+
 pub struct FulgurNetProvider {
     // `canonical_base` is consulted only by the native
     // `resolve_local_path`; on `wasm32-unknown-unknown` the resolver is a
     // stub that returns `None`, leaving this field intentionally unread.
     #[cfg_attr(target_arch = "wasm32", allow(dead_code))]
     canonical_base: Option<PathBuf>,
+    /// angelito: registered images, served by name before (and instead of) any disk access.
+    images: Option<Arc<crate::asset::AssetBundle>>,
     inner: Arc<Mutex<Inner>>,
 }
 
@@ -139,8 +165,28 @@ impl FulgurNetProvider {
         let canonical_base = base_path.and_then(|p| p.canonicalize().ok());
         Self {
             canonical_base,
+            images: None,
             inner: Arc::new(Mutex::new(Inner::default())),
         }
+    }
+
+    /// angelito: serve the bundle's registered images (by name, as `AssetBundle::get_image`
+    /// resolves them) so Blitz learns their intrinsic size; nothing else becomes readable.
+    pub(crate) fn with_images(mut self, images: Option<Arc<crate::asset::AssetBundle>>) -> Self {
+        self.images = images;
+        self
+    }
+
+    fn registered_image(&self, request: &Request) -> Option<Arc<Vec<u8>>> {
+        let bundle = self.images.as_ref()?;
+        if request.url.scheme() != "file" {
+            return None;
+        }
+        let name = request.url.as_str().strip_prefix("file:///")?;
+        bundle
+            .get_image(name)
+            .or_else(|| bundle.get_image(&percent_decode(name)?))
+            .cloned()
     }
 
     /// Take the queued [`Resource`] objects loaded so far. The caller
@@ -228,11 +274,13 @@ impl NetProvider<Resource> for FulgurNetProvider {
     fn fetch(&self, doc_id: usize, request: Request, handler: BoxedHandler<Resource>) {
         // angelito: `data:` URLs are decoded in memory (upstream dropped them, so
         // `<img src="data:...">` had no intrinsic size and was never drawn).
-        let (raw_bytes, is_css) = if request.url.scheme() == "data" {
-            let Some(decoded) = decode_data_url(request.url.as_str()) else {
+        let (raw_bytes, is_css) = if let Some(data) = self.registered_image(&request) {
+            (Bytes::from_owner(SharedBuf(data)), false)
+        } else if request.url.scheme() == "data" {
+            let Some((decoded, is_css)) = decode_data_url(request.url.as_str()) else {
                 return;
             };
-            decoded
+            (Bytes::from(decoded), is_css)
         } else {
             let Some(canonical_path) = self.resolve_local_path(&request) else {
                 return;
@@ -246,7 +294,7 @@ impl NetProvider<Resource> for FulgurNetProvider {
                 return;
             };
             let is_css = Self::looks_like_css(&request, &canonical_path);
-            (raw_bytes, is_css)
+            (Bytes::from(raw_bytes), is_css)
         };
 
         // For CSS, hand Blitz the *cleaned* body so its style engine
@@ -271,7 +319,7 @@ impl NetProvider<Resource> for FulgurNetProvider {
                         None,
                     )
                 } else {
-                    (Bytes::from(raw_bytes), None, None, None)
+                    (raw_bytes, None, None, None)
                 }
             } else {
                 // codex P2: `looks_like_css` under-detects a stylesheet
@@ -285,7 +333,7 @@ impl NetProvider<Resource> for FulgurNetProvider {
                 // around as a fallback the callback can use to backfill
                 // `column_css_texts` when this upfront guess was wrong.
                 let fallback = std::str::from_utf8(&raw_bytes).ok().map(str::to_string);
-                (Bytes::from(raw_bytes), None, None, fallback)
+                (raw_bytes, None, None, fallback)
             };
 
         // Blitz parses any payload it cannot decode as a raster image with
