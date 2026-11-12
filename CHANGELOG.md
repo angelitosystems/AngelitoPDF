@@ -11,14 +11,21 @@ Format: [Keep a Changelog](https://keepachangelog.com/). Versioning: SemVer.
 - Laravel: `->orientation('portrait'|'landscape')`, `->pageNumbers(text, position)`.
 - Tests: 24 layout-geometry tests (flex, grid, box model, position), 8 paged-media tests, 7 image tests.
 
+### Added (round 2)
+- `@font-face` in inline `<style>` (`url()` under `baseDir`, `data:`) and the `font-family` alias.
+- `background-image: url(data:…)`; intrinsic size for images registered via `images` without `baseDir`.
+- Error instead of a PDF with silently missing text when no font is available.
+- CI job `vendored`: upstream unit tests of the patched vendored crates (2 107 tests).
+
 ### Fixed
+- Per-side `border-color`/width/style (all sides were painted in the top colour).
+- `background-image` natural size used 1 px = 1 pt.
 - `@page` margin boxes used `text-align: start`: `@bottom-center` footers were left-aligned (CSS Paged Media §4.2 defaults now applied).
 - `page-break-inside: avoid` was ignored (legacy alias).
 - JPEG/GIF images had no intrinsic size.
 
 ### Known issues
-- Per-side `border-color` paints all sides with the top colour (test `per_side_border_colors`, ignored).
-- `@font-face` in inline `<style>` is ignored; the `font-family` descriptor is ignored.
+- `@font-face` fonts do not reach `@page` margin boxes; the `font-family` alias is ignored in linked stylesheets.
 
 ## [0.1.1] - 2026-11-11
 

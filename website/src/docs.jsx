@@ -342,15 +342,13 @@ Pdf::view('reportes.ventas', ['filas' => Venta::whereYear('fecha', 2026)->get()]
         <h2>Imágenes</h2>
         <p>Hay dos formas. La más simple es incrustarla como <code>data:</code>; el motor no toca disco ni red:</p>
         <Code lang="blade">{`<img src="data:image/png;base64,{{ base64_encode(file_get_contents(public_path('img/logo.png'))) }}" width="120" alt="Logo">`}</Code>
-        <p>PNG, JPEG y GIF (hasta 32 MiB y 40 megapíxeles, para frenar «bombas» de descompresión) y SVG, que se dibuja como vector. Si indicas solo <code>width</code> o solo <code>height</code>, se mantiene la proporción. La otra forma es registrar un archivo con un nombre y usarlo como <code>src</code>; en ese caso indica <code>width</code> y <code>height</code>:</p>
+        <p>PNG, JPEG y GIF (hasta 32 MiB y 40 megapíxeles, para frenar «bombas» de descompresión) y SVG, que se dibuja como vector. Si indicas solo <code>width</code> o solo <code>height</code>, se mantiene la proporción. La otra forma es registrar un archivo con un nombre y usarlo como <code>src</code>:</p>
         <Code lang="php">{`
 Pdf::view('facturas.show', compact('factura'))
     ->options(['images' => ['logo' => public_path('img/logo.png')]])
     ->download('f.pdf');`}</Code>
-        <Code lang="html">{`<img src="logo" width="120" height="40" alt="Logo">`}</Code>
-        <Note kind="warn" title="Aún no soportado">
-          <code>background-image: url(data:…)</code> todavía no funciona; usa <code>&lt;img&gt;</code>.
-        </Note>
+        <Code lang="html">{`<img src="logo" width="120" alt="Logo">
+<div style="background-image: url(data:image/png;base64,…); background-size: cover"></div>`}</Code>
         <h2>Hojas de estilo (Tailwind compilado, etc.)</h2>
         <Code lang="php">{`
 ->options(['css' => [file_get_contents(public_path('build/pdf.css'))]])
@@ -360,8 +358,13 @@ Pdf::view('facturas.show', compact('factura'))
         <h2>Fuentes</h2>
         <Code lang="php">{`->options(['fonts' => [resource_path('fonts/Inter-Regular.ttf')], 'systemFonts' => false])`}</Code>
         <p>La fuente se incrusta como subconjunto (solo los glifos usados) y el texto sigue siendo seleccionable y buscable.</p>
-        <Note kind="warn" title="@font-face">
-          <code>@font-face</code> funciona solo desde una hoja enlazada (<code>&lt;link&gt;</code> o <code>@import</code>) dentro de <code>baseDir</code>, y <code>font-family</code> debe ser el nombre interno de la fuente. Dentro de <code>&lt;style&gt;</code> se ignora: usa la opción <code>fonts</code>.
+        <p>También con <code>@font-face</code>, desde <code>data:</code> o desde un archivo dentro de <code>baseDir</code> (TTF, OTF, WOFF, WOFF2):</p>
+        <Code lang="html">{`<style>
+  @font-face { font-family: Marca; src: url(fonts/Inter-Regular.woff2) }
+  body { font-family: Marca }
+</style>`}</Code>
+        <Note kind="warn" title="Límites de @font-face">
+          No llega a los pies y encabezados de <code>@page</code> (usa la opción <code>fonts</code>). En hojas enlazadas con <code>&lt;link&gt;</code> el alias de <code>font-family</code> se ignora: usa el nombre interno de la fuente. No se aplican <code>font-weight</code>, <code>font-style</code> ni <code>unicode-range</code> del <code>@font-face</code>. Si no hay ninguna fuente disponible, el render devuelve un error en vez de un PDF sin texto.
         </Note>
       </>
     ),
@@ -465,11 +468,13 @@ let pdf: Vec<u8> = engine.render("<h1>Factura</h1>")?;`}</Code>
               ['@media print / screen, break-before/after, break-inside: avoid, page-break-*', 'Soportado'],
               ['Formatos A0–A10, B0–B10, Letter/Legal/Ledger, landscape, mm a medida (58/80 mm)', 'Soportado'],
               ['border uniforme, background-color', 'Soportado'],
-              ['border-color distinto por lado', 'Bug: pinta todos los lados del color superior'],
+              ['border-color / ancho / estilo distinto por lado', 'Soportado'],
               ['border-radius, box-shadow exterior', 'Soportado (solo revisión visual)'],
               ['<img> data: PNG/JPEG/GIF/SVG, tamaño natural y proporción', 'Soportado'],
               ['Fuentes propias (opción fonts)', 'Soportado'],
-              ['@font-face en hoja enlazada / en <style>', 'Parcial / No soportado'],
+              ['@font-face en <style> (url en baseDir o data:) con alias', 'Soportado'],
+              ['@font-face en hoja enlazada; en pies de @page', 'Parcial / No soportado'],
+              ['background-image: url(data:)', 'Soportado'],
               ['<link rel=stylesheet> / @import dentro de baseDir', 'Soportado'],
               ['Plantillas MiniJinja con datos', 'Soportado'],
               ['SVG inline, transform, gradientes, multicolumna', 'Lo afirma el renderizador, sin prueba propia'],

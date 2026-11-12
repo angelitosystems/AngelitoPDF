@@ -18,6 +18,8 @@ pub struct Engine {
     data: Option<serde_json::Value>,
     serialize_settings: SerializeSettings,
     system_fonts: bool,
+    // angelito: opt-in; upstream renders text without a font as nothing.
+    error_on_missing_font: bool,
 }
 
 /// Renderer-agnostic layout result produced by [`Engine::layout`].
@@ -83,6 +85,7 @@ impl Engine {
             data: None,
             serialize_settings: SerializeSettings::default(),
             system_fonts: true,
+            error_on_missing_font: false,
         }
     }
 
@@ -735,8 +738,8 @@ impl Engine {
         };
 
         let drawables = crate::convert::dom_to_drawables(&doc, &mut convert_ctx);
-        // angelito: upstream rendered such text as nothing, without error.
-        if drawables.text_without_font {
+        // angelito: upstream renders such text as nothing; error only when the caller opted in.
+        if self.error_on_missing_font && drawables.text_without_font {
             return Err(crate::error::Error::Layout(
                 "no font available to draw the document text: enable system fonts or register a font".into(),
             ));
@@ -1345,6 +1348,8 @@ pub struct EngineBuilder {
     data: Option<serde_json::Value>,
     serialize_settings: SerializeSettings,
     system_fonts: bool,
+    // angelito: opt-in; upstream renders text without a font as nothing.
+    error_on_missing_font: bool,
 }
 
 impl EngineBuilder {
@@ -1433,6 +1438,13 @@ impl EngineBuilder {
         self
     }
 
+    /// angelito: fail with `Error::Layout` when visible text has no font to draw it
+    /// (default `false`: such text is silently omitted, as upstream does).
+    pub fn error_on_missing_font(mut self, enabled: bool) -> Self {
+        self.error_on_missing_font = enabled;
+        self
+    }
+
     pub fn base_path(mut self, path: impl Into<PathBuf>) -> Self {
         self.base_path = Some(path.into());
         self
@@ -1471,6 +1483,7 @@ impl EngineBuilder {
             data: self.data,
             serialize_settings: self.serialize_settings,
             system_fonts: self.system_fonts,
+            error_on_missing_font: self.error_on_missing_font,
         }
     }
 }

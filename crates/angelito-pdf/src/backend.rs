@@ -19,7 +19,7 @@ impl Backend {
             size = size.landscape();
         }
 
-        let mut b = fulgur::Engine::builder().page_size(size).system_fonts(opts.system_fonts);
+        let mut b = fulgur::Engine::builder().page_size(size).system_fonts(opts.system_fonts).error_on_missing_font(true);
         if let Some(m) = opts.margin {
             let [t, r, bo, l] = match m {
                 Margin::Uniform(v) => [v; 4],

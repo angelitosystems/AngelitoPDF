@@ -23,12 +23,12 @@ aceptación se ejecuta en CI y pasa; la matriz `docs/css-support.md` se actualiz
 | Parser HTML5, HTML imperfecto, entidades, UTF-8 | funciona (html5ever) | `simple_html_produces_valid_pdf_with_text`; HTML imperfecto sin prueba propia |
 | Cascada, especificidad, herencia, `var()`, `calc()` | heredado de Stylo; **sin pruebas propias** | — |
 | Flexbox, Grid, box model, position, text-align | probado (24 pruebas de geometría) | `tests/layout.rs` |
-| `border-color` por lado | **bug: un solo color** | `per_side_border_colors` (ignorada) |
+| `border-color`/ancho/estilo por lado | probado (parche) | `tests/layout.rs` |
 | `@page`, margin boxes, contadores, `thead` repetido, `@media print`, `break-before` | probado | `invoice_paginates_…` |
 | margin boxes `@page` | probado; bug de alineación corregido (parche) | `tests/paged.rs` |
 | Imágenes registradas con tamaño | probado | `images_are_embedded_only_when_registered` |
 | Imágenes `data:` (PNG/JPEG/GIF/SVG), tamaño natural | probado (con límites anti-bomba) | `tests/images.rs` |
-| Fuentes propias (`fonts`), `@font-face` | `fonts` probado; `@font-face` parcial (solo CSS enlazado) | `tests/paged.rs` |
+| Fuentes propias (`fonts`), `@font-face` | probado (inline y enlazado; alias solo inline) | `tests/paged.rs` |
 | SVG, gradientes, `transform`, multicolumna, enlaces, marcadores, etiquetado | Fulgur lo incluye; **sin probar** | `vendor/fulgur-blitz/src/{svg,outline,link,tagging,multicol_layout}.rs` |
 | `box-shadow: inset`, `text-shadow` | no soportado | límite del renderizador |
 | Seguridad (red, archivos, UNC, límites) | probado | `tests/security.rs` |
@@ -39,7 +39,7 @@ aceptación se ejecuta en CI y pasa; la matriz `docs/css-support.md` se actualiz
 
 Prioridad: P0 arreglar lo que ya existe y falla → P1 probar lo que se supone que funciona → P2 ampliar.
 
-### Fase 1 — Estabilizar lo existente (P0) · 1.1–1.7 hechas (2026-11-12), 1.8 pendiente
+### Fase 1 — Estabilizar lo existente (P0) · hecha (2026-11-12) salvo los límites listados en 1.13–1.15
 
 | # | Tarea | Agente | Criterio de aceptación |
 |---|---|---|---|
@@ -50,11 +50,14 @@ Prioridad: P0 arreglar lo que ya existe y falla → P1 probar lo que se supone q
 | 1.5 ✅ parcial | Fuentes propias (`fonts`, `@font-face` con `baseDir`) | pagination-typography | prueba: la fuente aparece incrustada (subset) y el texto se extrae |
 | 1.6 ✅ | Geometría de Flexbox, Grid y box model | html-css | pruebas que leen posiciones del PDF: `justify-content`, `align-items`, `gap`, columnas de Grid, `margin`/`padding` |
 | 1.7 ✅ | `break-inside: avoid`, `break-after`, `page-break-*` | pagination-typography | prueba de texto por página |
-| 1.9 | `@font-face` en `<style>` inline y descriptor `font-family` (blitz-dom `process_style_element`; vendorizar `blitz-traits`) | pagination-typography | prueba con `<style>@font-face{font-family:Mi;src:url(...)}</style>` y `font-family:Mi` |
-| 1.10 | Tamaño natural de imágenes registradas solo con `images` (pasar el AssetBundle al net provider) y `background-image: url(data:)` | rust-engine | prueba de tamaño sin width/height |
-| 1.11 | Ejecutar en CI las pruebas unitarias de los crates vendorizados con nuestros parches (hoy cargo no las corre: no son miembros del workspace) | devops | job que corre `cargo test --lib` de fulgur-blitz/blitz-dom parcheados |
-| 1.12 | `systemFonts:false` sin fuentes: hoy el texto desaparece sin error → devolver `Error::Render` | rust-engine | prueba que espera el error |
-| 1.8 | `border-color` distinto por lado (hoy pinta los 4 lados con el color de arriba) | rust-engine | `per_side_border_colors` (layout.rs) deja de estar ignorada y pasa |
+| 1.9 ✅ | `@font-face` en `<style>` inline y descriptor `font-family` (blitz-dom `process_style_element`; vendorizar `blitz-traits`) | pagination-typography | prueba con `<style>@font-face{font-family:Mi;src:url(...)}</style>` y `font-family:Mi` |
+| 1.10 ✅ | Tamaño natural de imágenes registradas solo con `images` (pasar el AssetBundle al net provider) y `background-image: url(data:)` | rust-engine | prueba de tamaño sin width/height |
+| 1.11 ✅ | Ejecutar en CI las pruebas unitarias de los crates vendorizados con nuestros parches (hoy cargo no las corre: no son miembros del workspace) | devops | job que corre `cargo test --lib` de fulgur-blitz/blitz-dom parcheados |
+| 1.12 ✅ | `systemFonts:false` sin fuentes: hoy el texto desaparece sin error → devolver `Error::Render` | rust-engine | prueba que espera el error |
+| 1.8 ✅ | `border-color` distinto por lado (hoy pinta los 4 lados con el color de arriba) | rust-engine | `per_side_border_colors` (layout.rs) deja de estar ignorada y pasa |
+| 1.13 | Alias `font-family` de `@font-face` en hojas enlazadas/`@import` (`net.rs` `fetch_font_face` → `font_face::fetch_font_faces`) | pagination-typography | prueba con `<link>` y alias |
+| 1.14 | Fuentes de `@font-face` en margin boxes de `@page` (Fulgur maqueta cada caja sin net provider) | pagination-typography | prueba: pie con `font-family` de `@font-face` |
+| 1.15 | `border-radius` con colores/anchos distintos por lado; regresión visual de fixtures (bordes por lado pasaron de trazo a relleno) | rust-engine + qa | diff visual con tolerancia en CI |
 
 ### Fase 2 — Probar lo heredado del renderizador (P1)
 

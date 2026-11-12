@@ -25,20 +25,23 @@ Angelito PDF Engine is **not** a full HTML5/CSS browser engine.
 | `break-inside: avoid` / `avoid-page` / `page-break-inside: avoid` on blocks | Supported (alias: our patch) | `break_inside_avoid_keeps_a_block_on_one_page` |
 | `break-inside: avoid` on table rows | Supported | `table_rows_with_break_inside_avoid_are_never_split` |
 | Page sizes A0–A10, B0–B10, Letter/Legal/Ledger, landscape, custom mm (tickets 58/80 mm) | Supported | `page_formats_orientation_and_ticket_sizes`, `iso_216_a_and_b_series` |
-| Per-side border colours (`border-color: a b c d`) | **Partial (bug)** | ignored test `per_side_border_colors`: one stroke in the top colour for all four sides |
+| Per-side border colour / width / style (solid, none, dashed), mitred corners | Supported (our patch) | `per_side_border_colors`, `per_side_border_widths`, `per_side_border_styles`; `border-radius` with per-side colours is not rounded |
 | `border-radius`, `box-shadow` (outer) | Supported (visual check only) | invoice fixture; no geometry test yet |
 | `box-shadow: inset`, `text-shadow` | **Not supported** | renderer limitation |
 | `<img>` PNG/JPEG/GIF registered via `images` option + explicit width & height | Supported | `images_are_embedded_only_when_registered` |
-| `<img>` natural size / only `width` or `height` (keeps ratio) | Supported for `data:` and files under `baseDir`; **Partial** for images registered only via `images` (need explicit width & height) | `natural_size_and_aspect_ratio` |
+| `<img>` natural size / only `width` or `height` (keeps ratio) | Supported (`data:`, files under `baseDir`, images registered via `images`) | `natural_size_and_aspect_ratio`, `registered_image_has_natural_size_without_base_dir` |
 | `<img src="data:image/png\|jpeg\|gif;base64,…">` | Supported (≤ 32 MiB per URL, ≤ 40 MP) | `data_uri_raster_formats_are_embedded`, `data_uri_size_cap`, `data_uri_decompression_bomb_is_not_embedded` |
 | `<img src="data:image/svg+xml,…">` | Supported, drawn as vectors | `data_uri_svg_is_drawn_as_vector` |
 | `<link rel=stylesheet href="data:text/css,…">` | Supported without `baseDir` | `data_uri_stylesheet_applies_without_base_dir` |
-| `background-image: url(data:…)` | Not supported yet | reads only registered `images` |
+| `background-image: url(data:…)` | Supported (≤ 32 MiB, ≤ 40 MP; natural size in CSS px) | `background_image_data_uri` |
 | `<link rel=stylesheet>` / `@import` inside `baseDir` | Supported | `base_dir_allows_inside_and_blocks_traversal` |
 | Extra CSS (`css` option, e.g. compiled Tailwind) | Renderer claims | Tailwind build not tested yet |
 | Custom fonts (`fonts` option) | Supported | `fonts_option_embeds_the_font` (subset + FontFile2, text extractable) |
-| `@font-face` in a linked stylesheet / `@import` inside `baseDir` | Partial | `font_face_in_linked_stylesheet_resolves_against_base_dir`; `font-family` must be the font's internal name (blitz-dom ignores the descriptor) |
-| `@font-face` in inline `<style>` | **Not supported** | blitz-dom `process_style_element` never fetches fonts; see docs/pagination.md |
+| `@font-face` in inline `<style>` (`url()` under `baseDir`, `data:`; TTF/OTF/WOFF/WOFF2), `font-family` alias | Supported (our patch) | `inline_font_face_with_url_under_base_dir_and_family_alias`, `inline_font_face_from_data_url`, `inline_font_face_file_url_stays_inside_base_dir` |
+| `@font-face` in a linked stylesheet / `@import` inside `baseDir` | Partial | `font_face_in_linked_stylesheet_resolves_against_base_dir`; the `font-family` alias is ignored there (use the font's internal name) |
+| `@font-face` inside `@page` margin boxes | **Not supported** | margin boxes only see the `fonts` option; see docs/pagination.md |
+| `@font-face` `font-weight`/`font-style`/`unicode-range`/`local()`, nested in `@media` | **Not supported** | — |
+| Text with no font available (`systemFonts: false`, nothing registered) | Error (`Render: no font available…`) instead of a PDF with missing text | `text_without_any_font_is_an_error` |
 | Inline SVG, gradients, `transform`, multi-column | Renderer claims | tests pending |
 | Templates with data (MiniJinja, auto-escaped) | Supported | `template_data_is_rendered_and_html_escaped` |
 | Remote resources (`http(s)`) | Blocked by design | `remote_resources_are_not_fetched` |

@@ -243,15 +243,23 @@ fn inline_font_face_file_url_stays_inside_base_dir() {
     let abs = abs.to_string_lossy().trim_start_matches(r"\\?\").replace('\\', "/");
     for src in ["NotoSans-Regular.woff2".to_string(), format!("file:///{}", abs.trim_start_matches('/'))] {
         let html = format!("<style>@font-face{{font-family:Mi;src:url('{src}')}}</style><p style=\"font-family:Mi\">x</p>");
-        let doc = parse(&render(&html, &RenderOptions { system_fonts: false, ..Default::default() }).unwrap());
-        assert!(!embedded_fonts(&doc).iter().any(|(n, _)| n.contains("NotoSans")), "{src} was read without baseDir");
+        assert_font_not_loaded(render(&html, &RenderOptions { system_fonts: false, ..Default::default() }), &src);
         // Control: the same URL is read once baseDir contains the file.
         assert_noto_embedded(&parse(&render(&html, &paged_dir()).unwrap()));
     }
     // A file outside baseDir is not read even with baseDir set.
     let o = RenderOptions { base_dir: Some(fixtures().join("paged/no-fonts")), system_fonts: false, ..Default::default() };
     let html = "<style>@font-face{font-family:Mi;src:url(../NotoSans-Regular.woff2)}</style><p style=\"font-family:Mi\">x</p>";
-    assert!(!embedded_fonts(&parse(&render(html, &o).unwrap())).iter().any(|(n, _)| n.contains("NotoSans")));
+    assert_font_not_loaded(render(html, &o), "../ outside baseDir");
+}
+
+/// With `systemFonts: false`, a font that was not read leaves the text with no font at all, which the
+/// engine reports as an error (ROADMAP 1.12); an `Ok` PDF must at least not embed the font.
+fn assert_font_not_loaded(result: Result<Vec<u8>, angelito_pdf::Error>, what: &str) {
+    match result {
+        Err(e) => assert!(e.to_string().contains("no font"), "{what}: unexpected error {e}"),
+        Ok(pdf) => assert!(!embedded_fonts(&parse(&pdf)).iter().any(|(n, _)| n.contains("NotoSans")), "{what} was read"),
+    }
 }
 
 // ---- fragmentation -----------------------------------------------------------------------
