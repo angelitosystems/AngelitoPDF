@@ -101,7 +101,7 @@ try {
     await input.press('Enter')
     await p.waitForFunction(() => !document.querySelector('dialog[open][aria-label="Buscar en la documentación"]'))
     assert.match(p.url(), /#\/docs\/(errores|laravel|configuracion|seguridad)/)
-    await p.keyboard.press('Control+k'); await input.fill('zzzzqqq')
+    await p.getByRole('button', { name: 'Buscar (Ctrl K)' }).click(); await input.fill('zzzzqqq') // header button path; Ctrl+K is covered above (Linux Chrome may claim Ctrl+K after a navigation)
     await p.waitForSelector('text=Sin resultados')
     await p.keyboard.press('Escape')
     ok('search: Ctrl+K, results, Enter navigates, empty state, Esc closes')
