@@ -20,6 +20,16 @@ class PdfBuilder
         return $this->options(['landscape' => $landscape]);
     }
 
+    /** 'portrait' or 'landscape'. */
+    public function orientation(string $orientation): static
+    {
+        return match ($orientation) {
+            'portrait' => $this->landscape(false),
+            'landscape' => $this->landscape(),
+            default => throw new PdfException("orientation must be 'portrait' or 'landscape', got '{$orientation}'", 2),
+        };
+    }
+
     /** Millimetres: margin(10) or margin(top, right, bottom, left). */
     public function margin(float $top, ?float $right = null, ?float $bottom = null, ?float $left = null): static
     {

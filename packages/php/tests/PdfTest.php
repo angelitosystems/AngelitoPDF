@@ -51,6 +51,20 @@ class PdfTest extends TestCase
         $this->assertStringContainsString('Hola Mundo', $this->text($pdf));
     }
 
+    public function test_orientation_sets_page_shape(): void
+    {
+        $box = fn (string $o) => (new Parser)->parseContent(Pdf::html('<p>x</p>')->format('A5')->orientation($o)->output())
+            ->getPages()[0]->getDetails()['MediaBox'];
+        [, , $w, $h] = $box('portrait');
+        $this->assertLessThan($h, $w);
+        [, , $w, $h] = $box('landscape');
+        $this->assertGreaterThan($h, $w);
+
+        $this->expectException(PdfException::class);
+        $this->expectExceptionCode(2);
+        Pdf::html('<p>x</p>')->orientation('sideways');
+    }
+
     public function test_view_download_returns_pdf_response(): void
     {
         $res = Pdf::view('invoice', ['customer' => 'Angelito & Cía', 'total' => '123.45'])
