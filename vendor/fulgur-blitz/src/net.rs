@@ -60,6 +60,20 @@ pub(crate) fn is_plain_local_path(path: &Path) -> bool {
     }
 }
 
+/// angelito: decode a `data:` URL in memory (no disk, no network). Returns the bytes and
+/// whether the MIME type is CSS. URLs longer than [`MAX_RESOURCE_BYTES`] are rejected
+/// before decoding; decoded data is never longer than its URL, so that bounds the output.
+pub(crate) fn decode_data_url(url: &str) -> Option<(Vec<u8>, bool)> {
+    if url.len() > MAX_RESOURCE_BYTES {
+        return None;
+    }
+    let du = data_url::DataUrl::process(url).ok()?;
+    let mime = du.mime_type();
+    let is_css = mime.type_ == "text" && mime.subtype == "css";
+    let (bytes, _) = du.decode_to_vec().ok()?;
+    Some((bytes, is_css))
+}
+
 pub struct FulgurNetProvider {
     // `canonical_base` is consulted only by the native
     // `resolve_local_path`; on `wasm32-unknown-unknown` the resolver is a
@@ -212,14 +226,27 @@ impl FulgurNetProvider {
 
 impl NetProvider<Resource> for FulgurNetProvider {
     fn fetch(&self, doc_id: usize, request: Request, handler: BoxedHandler<Resource>) {
-        let Some(canonical_path) = self.resolve_local_path(&request) else {
-            return;
-        };
-        // angelito: bounded read (upstream read files of any size).
-        let Ok(raw_bytes) =
-            fulgur_core::asset::read_file_capped(&canonical_path, MAX_RESOURCE_BYTES, "resource")
-        else {
-            return;
+        // angelito: `data:` URLs are decoded in memory (upstream dropped them, so
+        // `<img src="data:...">` had no intrinsic size and was never drawn).
+        let (raw_bytes, is_css) = if request.url.scheme() == "data" {
+            let Some(decoded) = decode_data_url(request.url.as_str()) else {
+                return;
+            };
+            decoded
+        } else {
+            let Some(canonical_path) = self.resolve_local_path(&request) else {
+                return;
+            };
+            // angelito: bounded read (upstream read files of any size).
+            let Ok(raw_bytes) = fulgur_core::asset::read_file_capped(
+                &canonical_path,
+                MAX_RESOURCE_BYTES,
+                "resource",
+            ) else {
+                return;
+            };
+            let is_css = Self::looks_like_css(&request, &canonical_path);
+            (raw_bytes, is_css)
         };
 
         // For CSS, hand Blitz the *cleaned* body so its style engine
@@ -233,7 +260,7 @@ impl NetProvider<Resource> for FulgurNetProvider {
         // reads from inline `<style>` text nodes keeps both sources
         // parsed identically.
         let (bytes_for_blitz, gcpm_to_push, column_css_text, raw_text_fallback) =
-            if Self::looks_like_css(&request, &canonical_path) {
+            if is_css {
                 if let Ok(text) = std::str::from_utf8(&raw_bytes) {
                     let gcpm = parse_gcpm(text);
                     let cleaned = gcpm.cleaned_css.clone();

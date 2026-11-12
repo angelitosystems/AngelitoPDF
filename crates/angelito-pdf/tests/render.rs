@@ -70,6 +70,25 @@ fn page_formats_orientation_and_ticket_sizes() {
 }
 
 #[test]
+fn iso_216_a_and_b_series() {
+    const A: [(f32, f32); 11] = [(841., 1189.), (594., 841.), (420., 594.), (297., 420.), (210., 297.), (148., 210.), (105., 148.), (74., 105.), (52., 74.), (37., 52.), (26., 37.)];
+    const B: [(f32, f32); 11] = [(1000., 1414.), (707., 1000.), (500., 707.), (353., 500.), (250., 353.), (176., 250.), (125., 176.), (88., 125.), (62., 88.), (44., 62.), (31., 44.)];
+    let mm = |pt: f32| pt * 25.4 / 72.0;
+    // Default margins leave no content area on A10/B10, so pages are margin-free here.
+    for (series, table) in [("A", A), ("b", B)] {
+        for (n, (w, h)) in table.into_iter().enumerate() {
+            let format = format!("{series}{n}");
+            let (pw, ph) = first_page_size(&parse(&render("<p>x</p>", &RenderOptions { format: format.clone(), margin: Some(Margin::Uniform(0.0)), ..Default::default() }).unwrap()));
+            assert!((mm(pw) - w).abs() <= 0.5 && (mm(ph) - h).abs() <= 0.5, "{format}: expected {w}x{h} mm, got {}x{} mm", mm(pw), mm(ph));
+        }
+    }
+    let bad = |f: &str| matches!(Engine::new(&RenderOptions { format: f.into(), ..Default::default() }), Err(Error::InvalidOptions(_)));
+    for f in ["A11", "B-1", "A04", "A+4", "C4", "A", ""] {
+        assert!(bad(f), "{f:?} must be rejected");
+    }
+}
+
+#[test]
 fn options_deserialize_from_json_contract() {
     let o: RenderOptions = serde_json::from_str(r#"{"format":"Letter","margin":[10,5,10,5],"title":"T","systemFonts":false}"#).unwrap();
     assert_eq!(o.margin, Some(Margin::Sides([10.0, 5.0, 10.0, 5.0])));
@@ -134,7 +153,6 @@ fn image_count(doc: &Document) -> usize {
 }
 
 #[test]
-#[ignore = "pending (phase 2): renderer drops data: URIs in <img>; see docs/css-support.md"]
 fn data_uri_image_is_embedded() {
     let html = r#"<img style="width:40px" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAQAAAAECAIAAAAmkwkpAAAAEElEQVR4nGM4wcAARwzEcQBRwwyB7RhOggAAAABJRU5ErkJggg==">"#;
     assert_eq!(image_count(&parse(&render(html, &RenderOptions::default()).unwrap())), 1);

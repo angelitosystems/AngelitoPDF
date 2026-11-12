@@ -181,6 +181,15 @@ fn convert_content_url(
     true
 }
 
+/// angelito: pixel cap for raster `data:` URLs. The PDF writer decodes PNG/GIF to raw pixels,
+/// so a few KB of compressed zeros could otherwise allocate gigabytes (decompression bomb).
+const MAX_DATA_URL_PIXELS: u64 = 40_000_000;
+
+fn within_pixel_cap(data: &[u8], format: crate::image::ImageFormat) -> bool {
+    ImageRender::decode_dimensions(data, format)
+        .is_some_and(|(w, h)| u64::from(w) * u64::from(h) <= MAX_DATA_URL_PIXELS)
+}
+
 /// Convert an `<img>` element into an `ImageEntry`, plus a wrapping
 /// `BlockEntry` when the element has visual styling.
 fn convert_image(
@@ -195,12 +204,38 @@ fn convert_image(
     let Some(src) = get_attr(elem, "src") else {
         return false;
     };
-    let Some(bundle) = assets else { return false };
-    let Some(data) = bundle.get_image(src).cloned() else {
-        return false;
+    // angelito: registered images first, then in-memory `data:` URLs (never disk/network).
+    let (data, untrusted) = match assets.and_then(|b| b.get_image(src)) {
+        Some(d) => (Arc::clone(d), false),
+        None => match crate::net::decode_data_url(src.trim()) {
+            Some((bytes, _)) => (Arc::new(bytes), true),
+            None => return false,
+        },
     };
-    let Some(format) = ImageRender::detect_format(&data) else {
-        return false;
+    let format = ImageRender::detect_format(&data);
+    if let (true, Some(f)) = (untrusted, format) {
+        if !within_pixel_cap(&data, f) {
+            return false;
+        }
+    }
+    let Some(format) = format else {
+        // angelito: SVG behind `<img>` (upstream drew only raster `<img>`).
+        let Ok(tree) = usvg::Tree::from_data(&data, &crate::svg::sandboxed_options()) else {
+            return false;
+        };
+        let (content_w, content_h, opacity, visible) =
+            maybe_insert_block_for_replaced(node, assets, out);
+        out.svgs.insert(
+            node.id,
+            crate::drawables::SvgEntry {
+                tree: Arc::new(tree),
+                width: content_w.as_pt(),
+                height: content_h.as_pt(),
+                opacity,
+                visible,
+            },
+        );
+        return true;
     };
 
     let (content_w, content_h, opacity, visible) =

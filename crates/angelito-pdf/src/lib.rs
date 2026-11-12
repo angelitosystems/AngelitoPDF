@@ -79,7 +79,7 @@ const RENDER_STACK_BYTES: usize = 256 * 1024 * 1024;
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields, default)]
 pub struct RenderOptions {
-    /// Named size: A3, A4, A5, B4, B5, Letter, Legal, Ledger (case-insensitive).
+    /// Named size: A0–A10, B0–B10 (ISO 216), JIS-B4, JIS-B5, Letter, Legal, Ledger (case-insensitive).
     /// Ignored when `widthMm`/`heightMm` are set.
     pub format: String,
     /// Custom page size in millimetres, e.g. thermal tickets (58 or 80 mm wide).
