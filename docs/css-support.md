@@ -19,9 +19,11 @@ Angelito PDF Engine is **not** a full HTML5/CSS browser engine.
 | Tables, `border-collapse`, multi-page tables | Supported | invoice test: 90 rows across pages, none lost |
 | `thead` repeated on each page | Supported | invoice test (page 2 contains header) |
 | `@page { size; margin }`, margin boxes, `counter(page)` / `counter(pages)` | Supported | invoice test: "Página N de M" on every page |
+| Margin box default alignment (`@*-left` left, `@*-center` centre, `@*-right` right; author `text-align` wins) | Supported (our patch) | `margin_boxes_are_aligned_on_their_side`, `invoice_footer_is_centred_on_every_page`, `bottom_right_and_author_text_align_override` |
 | `@media print` / `@media screen` | Supported (with our Blitz patch) | invoice test; `vendor/README.md` |
-| `break-before: page` | Supported | invoice test |
-| `break-inside: avoid` on rows | Renderer claims | not asserted yet |
+| `break-before/after: page`, `page-break-before/after: always` | Supported | `forced_breaks_and_legacy_aliases_start_a_new_page` |
+| `break-inside: avoid` / `avoid-page` / `page-break-inside: avoid` on blocks | Supported (alias: our patch) | `break_inside_avoid_keeps_a_block_on_one_page` |
+| `break-inside: avoid` on table rows | Supported | `table_rows_with_break_inside_avoid_are_never_split` |
 | Page sizes A3/A4/A5/B4/B5/Letter/Legal/Ledger, landscape, custom mm (tickets 58/80 mm) | Supported | `page_formats_orientation_and_ticket_sizes` |
 | Per-side border colours (`border-color: a b c d`) | **Partial (bug)** | ignored test `per_side_border_colors`: one stroke in the top colour for all four sides |
 | `border-radius`, `box-shadow` (outer) | Supported (visual check only) | invoice fixture; no geometry test yet |
@@ -31,7 +33,9 @@ Angelito PDF Engine is **not** a full HTML5/CSS browser engine.
 | `<img src="data:...">` | **Pending** | ignored test `data_uri_image_is_embedded` |
 | `<link rel=stylesheet>` / `@import` inside `baseDir` | Supported | `base_dir_allows_inside_and_blocks_traversal` |
 | Extra CSS (`css` option, e.g. compiled Tailwind) | Renderer claims | Tailwind build not tested yet |
-| Custom fonts (`fonts` option, TTF/OTF/WOFF2) | Renderer claims | test pending (phase 2) |
+| Custom fonts (`fonts` option) | Supported | `fonts_option_embeds_the_font` (subset + FontFile2, text extractable) |
+| `@font-face` in a linked stylesheet / `@import` inside `baseDir` | Partial | `font_face_in_linked_stylesheet_resolves_against_base_dir`; `font-family` must be the font's internal name (blitz-dom ignores the descriptor) |
+| `@font-face` in inline `<style>` | **Not supported** | blitz-dom `process_style_element` never fetches fonts; see docs/pagination.md |
 | Inline SVG, gradients, `transform`, multi-column | Renderer claims | tests pending |
 | Templates with data (MiniJinja, auto-escaped) | Supported | `template_data_is_rendered_and_html_escaped` |
 | Remote resources (`http(s)`) | Blocked by design | `remote_resources_are_not_fetched` |

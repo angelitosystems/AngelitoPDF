@@ -243,8 +243,7 @@ fn straddling_block(css: &str) -> Vec<String> {
 fn break_inside_avoid_keeps_a_block_on_one_page() {
     let split = straddling_block("");
     assert_ne!(pages_with(&split, "Linea 01"), pages_with(&split, "Linea 12"), "control: block must straddle the break");
-    // `page-break-inside` is not parsed yet (vendor/fulgur-blitz/src/column_css.rs:618, see docs/pagination.md).
-    for css in ["break-inside: avoid", "break-inside: avoid-page"] {
+    for css in ["break-inside: avoid", "break-inside: avoid-page", "page-break-inside: avoid"] {
         let pages = straddling_block(css);
         assert_eq!(pages_with(&pages, "Linea 01"), vec![1], "{css}: block must move to page 2: {pages:?}");
         assert_eq!(pages_with(&pages, "Linea 12"), vec![1], "{css}");

@@ -615,7 +615,7 @@ impl<'i, 'a> DeclarationParser<'i> for ColumnDeclParser<'a> {
             if let Ok(fill) = input.parse_entirely(parse_column_fill_value) {
                 self.props.fill = Some(fill);
             }
-        } else if name.eq_ignore_ascii_case("break-inside") {
+        } else if name.eq_ignore_ascii_case("break-inside") || name.eq_ignore_ascii_case("page-break-inside") {
             // `break-inside` (CSS Fragmentation Level 3) maps
             // `avoid-page` / `avoid-column` / `avoid` all onto
             // [`BreakInside::Avoid`]: fulgur's fragmentation model only

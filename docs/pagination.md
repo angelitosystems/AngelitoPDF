@@ -57,9 +57,9 @@ Limits of `@font-face` (blitz-dom 0.2.4, outside the files this doc's owner may 
 |---|---|---|
 | `break-before: page`, `page-break-before: always` | yes | `forced_breaks_and_legacy_aliases_start_a_new_page` |
 | `break-after: page`, `page-break-after: always` | yes, next content starts a new page | same |
+| `page-break-inside: avoid` | yes (alias added in our patch to `column_css.rs:618`) | `break_inside_avoid_keeps_a_block_on_one_page` |
 | `break-inside: avoid` / `avoid-page` on a block | yes, the block moves whole to the next page (control without it splits) | `break_inside_avoid_keeps_a_block_on_one_page` |
 | `tr { break-inside: avoid }` | yes, 60 three-line rows, none split | `table_rows_with_break_inside_avoid_are_never_split` |
-| `page-break-inside: avoid` | **no**, ignored | parser lacks the alias: `vendor/fulgur-blitz/src/column_css.rs:618` only matches `break-inside`. One-line fix verified locally (adding `\|\| name.eq_ignore_ascii_case("page-break-inside")` makes the block test pass with the alias), pending integration |
 
 Observed, not a guarantee: a single block of lines separated by `<br>` (one paragraph-like box)
 moved whole to page 2 instead of splitting; a long `<p>` does split across pages.

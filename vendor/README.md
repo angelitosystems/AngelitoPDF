@@ -12,5 +12,8 @@ Remove a patch as soon as upstream ships an equivalent fix.
 | fulgur-blitz | 0.41.0 | `src/blitz_adapter.rs` `resolve_style_imports`: same UNC check before `canonicalize()` | same issue via `@import` |
 | fulgur-blitz | 0.41.0 | `src/template.rs`: `env.set_fuel(Some(10_000_000))`; `Cargo.toml`: minijinja feature `fuel` | templates had no CPU bound. Test `template_cpu_is_bounded`. |
 
+| fulgur-blitz | 0.41.0 | `src/gcpm/margin_box.rs:63` new `default_text_align()`; `src/gcpm/parser.rs:481` margin-box declarations start with the UA `text-align` | Fulgur did not apply the CSS Paged Media 3 §4.2 defaults: `@bottom-center` was left-aligned. Tests `margin_boxes_are_aligned_on_their_side`, `invoice_footer_is_centred_on_every_page`. |
+| fulgur-blitz | 0.41.0 | `src/column_css.rs:618` also match `page-break-inside` | legacy alias was ignored. Test `break_inside_avoid_keeps_a_block_on_one_page`. |
+
 fulgur-blitz is `MIT OR Apache-2.0`, © the Fulgur contributors (https://github.com/fulgur-rs/fulgur).
 All three issues should be reported upstream.
