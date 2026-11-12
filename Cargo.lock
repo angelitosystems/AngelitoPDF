@@ -165,6 +165,7 @@ dependencies = [
  "fastrand",
  "html-escape",
  "image",
+ "imagesize 0.14.0",
  "keyboard-types",
  "linebender_resource_handle",
  "markup5ever",

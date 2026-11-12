@@ -1,5 +1,5 @@
 use selectors::context::QuirksMode;
-use std::{io::Cursor, sync::Arc, sync::atomic::AtomicBool};
+use std::{sync::Arc, sync::atomic::AtomicBool};
 use style::{
     font_face::{FontFaceSourceFormat, FontFaceSourceFormatKeyword, Source},
     media_queries::MediaList,
@@ -305,6 +305,17 @@ fn fetch_font_face(
         });
 }
 
+/// angelito: intrinsic size of a PNG/JPEG/GIF from its header, without decoding pixels.
+fn raster_header_size(bytes: &[u8]) -> Option<(u32, u32)> {
+    use imagesize::ImageType as T;
+    match imagesize::image_type(bytes).ok()? {
+        T::Png | T::Jpeg | T::Gif => {}
+        _ => return None,
+    }
+    let size = imagesize::blob_size(bytes).ok()?;
+    Some((size.width.try_into().ok()?, size.height.try_into().ok()?))
+}
+
 pub struct ImageHandler(usize, ImageType);
 impl ImageHandler {
     pub fn new(node_id: usize, kind: ImageType) -> Self {
@@ -313,22 +324,13 @@ impl ImageHandler {
 }
 impl NetHandler<Resource> for ImageHandler {
     fn bytes(self: Box<Self>, doc_id: usize, bytes: Bytes, callback: SharedCallback<Resource>) {
-        // Try parse image
-        if let Ok(image) = image::ImageReader::new(Cursor::new(&bytes))
-            .with_guessed_format()
-            .expect("IO errors impossible with Cursor")
-            .decode()
-        {
-            let raw_rgba8_data = image.clone().into_rgba8().into_raw();
+        // angelito: read only the header for layout. Upstream decoded every image to RGBA
+        // (only PNG was enabled, so JPEG/GIF got no intrinsic size; a small PNG bomb could
+        // allocate gigabytes). The PDF writer embeds the original bytes, never this buffer.
+        if let Some((width, height)) = raster_header_size(&bytes) {
             callback.call(
                 doc_id,
-                Ok(Resource::Image(
-                    self.0,
-                    self.1,
-                    image.width(),
-                    image.height(),
-                    Arc::new(raw_rgba8_data),
-                )),
+                Ok(Resource::Image(self.0, self.1, width, height, Arc::new(Vec::new()))),
             );
             return;
         };

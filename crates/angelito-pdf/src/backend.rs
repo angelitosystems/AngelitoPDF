@@ -11,6 +11,7 @@ impl Backend {
         let mut size = match (opts.width_mm, opts.height_mm) {
             (Some(w), Some(h)) if w > 0.0 && h > 0.0 => PageSize::custom(w, h),
             (None, None) => PageSize::from_css_keyword(&opts.format.to_ascii_lowercase())
+                .or_else(|| iso_216(&opts.format))
                 .ok_or_else(|| Error::InvalidOptions(format!("unknown format '{}'", opts.format)))?,
             _ => return Err(Error::InvalidOptions("widthMm and heightMm must both be positive".into())),
         };
@@ -61,6 +62,22 @@ impl Backend {
     pub fn render(&self, html: &str) -> Result<Vec<u8>> {
         self.0.render(html).map_err(|e| Error::Render(e.to_string()))
     }
+}
+
+/// ISO 216 A0–A10 / B0–B10: each size halves the previous one's long side, rounded down to whole mm.
+fn iso_216(format: &str) -> Option<PageSize> {
+    let f = format.trim().to_ascii_uppercase();
+    let (series, rest) = f.split_at_checked(1)?;
+    let n = rest.parse::<u8>().ok().filter(|n| *n <= 10 && n.to_string() == rest)?; // rejects "A04", "A+4"
+    let (mut w, mut h) = match series {
+        "A" => (841u32, 1189u32),
+        "B" => (1000, 1414),
+        _ => return None,
+    };
+    for _ in 0..n {
+        (w, h) = (h / 2, w);
+    }
+    Some(PageSize::custom(w as f32, h as f32))
 }
 
 pub(crate) fn expand_template(tpl: &str, data: &serde_json::Value) -> Result<String> {
