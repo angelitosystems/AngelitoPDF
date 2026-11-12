@@ -38,9 +38,9 @@ y ejecuta la batería completa antes de cerrar una fase.
 |---|---|---|---|
 | 0. Base tecnológica | `docs/research/evaluation.md` con pruebas ejecutadas; ADR-0001 | — | hecho |
 | 1. Núcleo | `cargo test` genera un PDF real desde HTML+CSS (sin Chromium), validado con un parser PDF independiente | 0 | hecho (CI verde en Linux x64/ARM64, Windows x64, macOS Intel/ARM64) |
-| 2. Fuentes, imágenes, tablas, paginación | fixtures de factura, ticket 58/80mm, reporte largo; nº de páginas y texto por página verificados | 1 | pendiente |
-| 3a. Laravel (`packages/php`) | Testbench: `Pdf::view()->download()` devuelve `application/pdf` válido | 1 | hecho (16 tests, CI verde en Linux y Windows) |
-| 3b. Node/NestJS (`packages/node`) | `npm test`: `await Pdf.fromHtml().render()` devuelve Buffer PDF válido sin bloquear el event loop | 1 | pendiente |
+| 2. Fuentes, imágenes, tablas, paginación | fixtures de factura, ticket 58/80mm, reporte largo; nº de páginas y texto por página verificados | 1 | en curso: ver docs/ROADMAP.md fase 1 (1.1–1.7 hechas) |
+| 3a. Laravel (`packages/php`) | Testbench: `Pdf::view()->download()` devuelve `application/pdf` válido | 1 | hecho (18 tests, Laravel 11–13, CI verde en Linux y Windows) |
+| 3b. Node/NestJS (`packages/node`) | `npm test`: `await Pdf.fromHtml().render()` devuelve Buffer PDF válido sin bloquear el event loop | 1 | en curso: ver docs/ROADMAP.md fase 1 (1.1–1.7 hechas) |
 | 4. Rendimiento | `docs/benchmarks.md` con p50/p95, RSS, tamaño, frío/caliente, datos crudos | 1 | hecho (máquina con carga; repetir en reposo) |
 | 5. Distribución | CI matriz 5 plataformas, smoke test por binario, publicación npm/Packagist | 3a, 3b | Release v0.1.0 con 5 binarios + SHA256SUMS y Pages publicados; `pdf:install` verificado contra el Release real. Pendiente: alta en Packagist (manual) y npm (depende de 3b) |
 
