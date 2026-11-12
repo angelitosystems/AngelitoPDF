@@ -4,6 +4,9 @@ Copied unmodified from crates.io except for the lines below. Both are
 `MIT OR Apache-2.0`, © the Blitz contributors (https://github.com/dioxuslabs/blitz).
 Remove a patch as soon as upstream ships an equivalent fix.
 
+Validate the patches against upstream's own unit tests with `bash scripts/vendored-tests.sh`
+(builds the three crates against each other's patched copies; runs in CI as job `vendored`).
+
 | Crate | Version | Change | Why |
 |---|---|---|---|
 | blitz-dom | 0.2.4 | `src/document.rs:180` `MediaType::screen()` → `MediaType::print()` | We render paged print output; `@media print` rules were ignored and `@media screen` applied. Verified by `invoice_paginates_repeats_header_and_honours_print_rules`. |
